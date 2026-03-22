@@ -26,7 +26,8 @@ const bcrypt = require("bcryptjs");
 
 const register = async (req, res) => {
   try {
-    console.log("REQ BODY:", req.body);
+    console.log("REGISTER HIT");
+    console.log("BODY:", req.body);
     const { name, email, password, role, team } = req.body;
 
     if (!name || !email || !password) {
@@ -48,6 +49,8 @@ const register = async (req, res) => {
       role: role || "Member",
       team: team || null
     });
+
+    console.log("USER CREATED:", user);
 
     return res.status(201).json({
       success: true,

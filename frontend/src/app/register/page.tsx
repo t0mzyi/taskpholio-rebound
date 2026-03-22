@@ -51,6 +51,7 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (!res.ok) {
+        console.error("FRONTEND ERROR:", data);
         alert(data.message || "Registration failed");
         return;
       }
@@ -58,7 +59,7 @@ export default function RegisterPage() {
       toast.success("Account created successfully!");
       router.push("/login");
     } catch (error) {
-      console.error(error);
+      console.error("FRONTEND REQUEST ERROR:", error);
       alert("Registration failed");
     }
   };
