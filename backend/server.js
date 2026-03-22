@@ -7,9 +7,29 @@ const rateLimit = require('express-rate-limit');
 const Sentry = require('@sentry/node');
 const mongoose = require('mongoose'); // Added for graceful shutdown
 
-require('dotenv').config();
-const { validateEnv } = require('./config/env');
-validateEnv();
+if (process.env.NODE_ENV !== "production") {
+  require("dotenv").config();
+}
+
+const requiredEnv = [
+  "MONGO_URI",
+  "JWT_SECRET",
+  "CLOUDINARY_CLOUD_NAME",
+  "CLOUDINARY_API_KEY",
+  "CLOUDINARY_API_SECRET"
+];
+
+requiredEnv.forEach((key) => {
+  if (!process.env[key]) {
+    console.error(`Missing ENV variable: ${key}`);
+    process.exit(1);
+  }
+});
+
+console.log("ENV CHECK:", {
+  mongo: !!process.env.MONGO_URI,
+  jwt: !!process.env.JWT_SECRET
+});
 
 const connectDB = require('./config/db');
 const { apiLimiter, strictUserLimiter, moderateUserLimiter } = require('./middleware/rateLimiter');
