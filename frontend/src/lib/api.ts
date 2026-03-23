@@ -13,8 +13,11 @@ export const api = axios.create({
   withCredentials: true,
 });
 
-// Attach JWT token to every request
+// DIAGNOSTIC REQUEST LOGGING
 api.interceptors.request.use((config) => {
+  const fullUrl = `${config.baseURL}${config.url}`;
+  console.log(`[API REQUEST] ${config.method?.toUpperCase()} ${fullUrl}`, config.data);
+  
   if (typeof window !== "undefined") {
     const token = localStorage.getItem("taskpholio_token");
     if (token) config.headers.Authorization = `Bearer ${token}`;
@@ -22,10 +25,14 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle 401 unauthorized globally
+// DIAGNOSTIC RESPONSE/ERROR LOGGING
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log(`[API RESPONSE] ${response.config.method?.toUpperCase()} ${response.config.url}:`, response.data);
+    return response;
+  },
   (error) => {
+    console.error(`[API ERROR] ${error.config?.method?.toUpperCase()} ${error.config?.url}:`, error.response?.data || error.message);
     if (error.response?.status === 401) {
       if (typeof window !== "undefined") {
         localStorage.removeItem("taskpholio_token");
