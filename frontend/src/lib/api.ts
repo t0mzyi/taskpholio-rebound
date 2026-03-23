@@ -1,11 +1,12 @@
 import axios from "axios";
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.endsWith('/') 
-  ? process.env.NEXT_PUBLIC_API_URL 
-  : `${process.env.NEXT_PUBLIC_API_URL}/`;
+let RAW_URL = process.env.NEXT_PUBLIC_API_URL || "https://taskpholio-saas-1.onrender.com/api/v1";
 
-if (!API_BASE_URL) {
-  console.warn("NEXT_PUBLIC_API_URL is not defined. API requests might fail.");
+// Ensure /api/v1 prefix is present (Defensive check for Vercel env mismatches)
+if (RAW_URL && !RAW_URL.includes("/api/v1")) {
+  RAW_URL = RAW_URL.endsWith("/") ? `${RAW_URL}api/v1` : `${RAW_URL}/api/v1`;
 }
+
+const API_BASE_URL = RAW_URL.endsWith('/') ? RAW_URL : `${RAW_URL}/`;
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

@@ -28,7 +28,7 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
         try {
           const API = process.env.NEXT_PUBLIC_API_URL;
-          console.log("LOGIN URL:", `${API}/auth/login`);
+          console.log("LOGIN ATTEMPT TO:", `${api.defaults.baseURL}auth/login`);
           
           const res = await api.post("auth/login", { email, password });
           const token = res.data.data.token;
