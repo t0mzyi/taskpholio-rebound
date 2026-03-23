@@ -29,7 +29,8 @@ export const useAdminStore = create<AdminState>()((set, get) => ({
     try {
       const params = new URLSearchParams(filters).toString();
       const res = await api.get(`/auth/users${params ? `?${params}` : ""}`);
-      set({ users: res.data.data.users, isLoading: false });
+      const users = res.data.data.users;
+      set({ users, isLoading: false });
     } catch { set({ isLoading: false }); }
   },
 
@@ -37,7 +38,8 @@ export const useAdminStore = create<AdminState>()((set, get) => ({
     set({ isLoading: true });
     try {
       const res = await api.get("/teams");
-      set({ teams: res.data.data.teams, isLoading: false });
+      const teams = res.data.data.teams;
+      set({ teams, isLoading: false });
     } catch { set({ isLoading: false }); }
   },
 

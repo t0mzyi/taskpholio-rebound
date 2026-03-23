@@ -31,7 +31,8 @@ export const useAuthStore = create<AuthState>()(
           console.log("LOGIN URL:", `${API}/auth/login`);
           
           const res = await api.post("/auth/login", { email, password });
-          const { user, token } = res.data.data;
+          const token = res.data.data.token;
+          const user = res.data.data.user;
           
           localStorage.setItem("taskpholio_token", token);
           set({ user, token, isAuthenticated: true, isLoading: false });
@@ -50,7 +51,8 @@ export const useAuthStore = create<AuthState>()(
           
           const payload = team ? { name, email, password, role, team } : { name, email, password, role };
           const res = await api.post("/auth/register", payload);
-          const { user, token } = res.data.data;
+          const token = res.data.data.token;
+          const user = res.data.data.user;
           
           localStorage.setItem("taskpholio_token", token);
           set({ user, token, isAuthenticated: true, isLoading: false });
