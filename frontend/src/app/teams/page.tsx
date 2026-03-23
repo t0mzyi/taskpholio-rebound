@@ -8,7 +8,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useAdminStore } from "@/store/adminStore";
 import { useAuthStore } from "@/store/authStore";
-import { cn } from "@/lib/utils";
+import { cn, isAdmin } from "@/lib/utils";
 import { toast } from "sonner";
 import Image from "next/image";
 
@@ -22,7 +22,6 @@ export default function TeamsPage() {
     fetchTeams();
   }, []);
 
-  const isAdmin = user?.role === "CEO" || user?.role === "CTO";
 
   const filteredTeams = teams.filter(t => 
     t.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -48,7 +47,7 @@ export default function TeamsPage() {
               className="bg-secondary/50 border border-border/50 rounded-xl pl-12 pr-4 py-2.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 w-full md:w-64 transition-all"
             />
           </div>
-          {isAdmin && (
+          {isAdmin(user?.role || "") && (
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -159,6 +158,7 @@ function TeamCard({ team, onSelect }: any) {
 }
 
 function TeamDetailsModal({ team, isOpen, onClose }: any) {
+  const { user } = useAuthStore();
   if (!isOpen) return null;
 
   const completionRate = team.stats?.totalTasks > 0
