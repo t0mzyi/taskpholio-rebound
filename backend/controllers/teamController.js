@@ -58,6 +58,16 @@ const updateTeam = async (req, res, next) => {
       .populate('manager', 'name avatar role email')
       .populate('members', 'name avatar role email');
     if (!team) return error(res, 'Team not found.', 404);
+
+    // Sync User models with new team state
+    if (req.body.members) {
+      const memberIds = req.body.members;
+      // Clear team from anyone previously in this team
+      await User.updateMany({ team: team._id }, { $unset: { team: '' } });
+      // Add team to current members
+      await User.updateMany({ _id: { $in: memberIds } }, { team: team._id });
+    }
+
     return success(res, { team }, 'Team updated');
   } catch (err) {
     next(err);

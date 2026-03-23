@@ -159,9 +159,10 @@ const updateTask = async (req, res, next) => {
 
     // If reassigning, update visibleTo dynamically to maintain private access
     if (req.body.assignedTo) {
-      const assignedTo = req.body.assignedTo;
-      updates.assignedTo = assignedTo;
-      updates.visibleTo = [...new Set([task.creator.toString(), ...assignedTo])];
+      // Normalize to IDs (handles populated objects or just ID strings)
+      const assignedToIds = req.body.assignedTo.map(id => typeof id === 'object' ? id._id : id);
+      updates.assignedTo = assignedToIds;
+      updates.visibleTo = [...new Set([task.creator.toString(), ...assignedToIds])];
     }
 
     // Handle visibility update if provided

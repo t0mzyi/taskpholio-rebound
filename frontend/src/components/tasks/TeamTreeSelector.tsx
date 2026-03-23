@@ -17,7 +17,7 @@ export default function TeamTreeSelector({ users, teams, selected, onChange }: P
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
 
   const ctos = users.filter((u) => u.role === "CTO");
-  const unassigned = users.filter((u) => u.role === "Member" && !teams.some((t) => t.members.some((m) => m._id === u._id)));
+  const unassigned = users.filter((u) => u.role === "Member" && !teams.some((t) => t.members.some((m) => (typeof m === 'string' ? m : m._id) === u._id)));
 
   const filteredTeams = useMemo(() => {
     if (!search) return teams;
@@ -25,7 +25,7 @@ export default function TeamTreeSelector({ users, teams, selected, onChange }: P
     return teams.filter(
       (t) =>
         t.name.toLowerCase().includes(q) ||
-        t.members.some((m) => m.name.toLowerCase().includes(q))
+        t.members.some((m) => (typeof m === 'string' ? m : m.name).toLowerCase().includes(q))
     );
   }, [teams, search]);
 
@@ -39,7 +39,7 @@ export default function TeamTreeSelector({ users, teams, selected, onChange }: P
   };
 
   const toggleTeam = (team: Team) => {
-    const memberIds = team.members.map((m) => m._id);
+    const memberIds = team.members.map((m) => typeof m === 'string' ? m : m._id);
     const allSelected = memberIds.every((id) => selected.includes(id));
     if (allSelected) {
       onChange(selected.filter((s) => !memberIds.includes(s)));
@@ -56,8 +56,8 @@ export default function TeamTreeSelector({ users, teams, selected, onChange }: P
     });
   };
 
-  const isAllTeamSelected = (team: Team) => team.members.every((m) => selected.includes(m._id));
-  const isSomeTeamSelected = (team: Team) => team.members.some((m) => selected.includes(m._id));
+  const isAllTeamSelected = (team: Team) => team.members.every((m) => selected.includes(typeof m === 'string' ? m : m._id));
+  const isSomeTeamSelected = (team: Team) => team.members.some((m) => selected.includes(typeof m === 'string' ? m : m._id));
 
   return (
     <div className="space-y-3">

@@ -100,7 +100,7 @@ function TeamModal({ team, allUsers, onClose }: { team?: Team; allUsers: User[];
   const [name, setName] = useState(team?.name || "");
   const [description, setDescription] = useState(team?.description || "");
   const [managerId, setManagerId] = useState(team?.manager?._id || "");
-  const [memberIds, setMemberIds] = useState<string[]>(team?.members?.map((m) => m._id) || []);
+  const [memberIds, setMemberIds] = useState<string[]>(team?.members?.map((m) => typeof m === 'string' ? m : m._id) || []);
   const [loading, setLoading] = useState(false);
 
   const managers = allUsers.filter((u) => isAdmin(u.role));
