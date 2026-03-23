@@ -56,9 +56,15 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      logout: () => {
-        localStorage.removeItem("taskpholio_token");
-        set({ user: null, token: null, isAuthenticated: false });
+      logout: async () => {
+        try {
+          await api.post("auth/logout");
+        } catch (err) {
+          console.error("LOGOUT ERROR:", err);
+        } finally {
+          localStorage.removeItem("taskpholio_token");
+          set({ user: null, token: null, isAuthenticated: false });
+        }
       },
 
       fetchMe: async () => {

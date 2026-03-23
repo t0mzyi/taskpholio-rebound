@@ -187,10 +187,13 @@ export default function CreateTaskModal({ onClose }: Props) {
                       onChange={(e) => setFormData({...formData, assignedTo: e.target.value})}
                       className="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold focus:border-primary/50 transition-all appearance-none"
                     >
-                      <option value="">SELECT HERO</option>
-                      {users.map(u => (
-                        <option key={u._id} value={u._id} className="bg-neutral-900">{u.name}</option>
-                      ))}
+                      <option value="">SELECT OPERATIVE</option>
+                      {users
+                        .filter(u => !formData.team || (u.team as any)?._id === formData.team || (u.team as any) === formData.team)
+                        .map(u => (
+                          <option key={u._id} value={u._id} className="bg-neutral-900">{u.name} ({u.role})</option>
+                        ))
+                      }
                     </select>
                   </div>
                 </div>

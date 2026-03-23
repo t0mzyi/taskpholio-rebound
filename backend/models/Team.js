@@ -4,7 +4,6 @@ const teamSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    enum: ['Technical Team', 'Cybersecurity Team', 'Social Media Team'],
     unique: true
   },
   description: String,
