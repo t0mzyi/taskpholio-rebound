@@ -116,7 +116,9 @@ exports.register = async (req, res) => {
           role: user.role,
           team: user.team,
           avatar: user.avatar,
-          emailVerified: user.emailVerified
+          emailVerified: user.emailVerified,
+          createdAt: user.createdAt,
+          lastSeen: user.lastSeen
         }
       }
     });
@@ -205,7 +207,9 @@ exports.login = async (req, res) => {
           team: user.team,
           avatar: user.avatar,
           emailVerified: user.emailVerified,
-          preferences: user.preferences
+          preferences: user.preferences,
+          createdAt: user.createdAt,
+          lastSeen: user.lastSeen
         }
       }
     });
