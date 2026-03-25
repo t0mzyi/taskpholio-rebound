@@ -1,155 +1,112 @@
-const CACHE_NAME = 'taskpholio-v1.0.2';
-const urlsToCache = [
-  '/',
-  '/dashboard',
-  '/tasks',
-  '/teams',
-  '/analytics',
-  '/meetings',
-  '/offline'
+const CACHE_VERSION = "v2.0.0";
+const STATIC_CACHE = `taskpholio-static-${CACHE_VERSION}`;
+const RUNTIME_CACHE = `taskpholio-runtime-${CACHE_VERSION}`;
+
+const APP_SHELL = [
+  "/",
+  "/offline",
+  "/manifest.json",
+  "/icons/icon-192x192.png",
+  "/icons/icon-512x512.png",
 ];
 
-// Install event
-self.addEventListener('install', (event) => {
-  console.log('[Service Worker] Installing...');
+self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker] Caching app shell');
-      return cache.addAll(urlsToCache);
-    })
+    caches.open(STATIC_CACHE).then((cache) => cache.addAll(APP_SHELL))
   );
   self.skipWaiting();
 });
 
-// Activate event
-self.addEventListener('activate', (event) => {
-  console.log('[Service Worker] Activating...');
+self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('[Service Worker] Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys
+          .filter((key) => key !== STATIC_CACHE && key !== RUNTIME_CACHE)
+          .map((key) => caches.delete(key))
+      )
+    )
   );
   self.clients.claim();
 });
 
-// Fetch event - Network first, fallback to cache
-self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
+const isNavigationRequest = (request) =>
+  request.mode === "navigate" ||
+  (request.method === "GET" && request.headers.get("accept")?.includes("text/html"));
 
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        // Clone the response
-        const responseClone = response.clone();
-        
-        // Cache successful responses
-        if (response.status === 200) {
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
-          });
-        }
-        
-        return response;
-      })
-      .catch(() => {
-        // Network failed, try cache
-        return caches.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          
-          // If not in cache, return offline page
-          if (event.request.mode === 'navigate') {
-            return caches.match('/offline');
-          }
-        });
-      })
-  );
-});
+self.addEventListener("fetch", (event) => {
+  const { request } = event;
+  if (request.method !== "GET") return;
 
-// Push notification
-self.addEventListener('push', (event) => {
-  console.log('[Service Worker] Push received');
-  
-  let data = {};
-  if (event.data) {
-    try {
-      data = event.data.json();
-    } catch {
-      data = { body: event.data.text() };
-    }
-  }
-  
-  const title = data.title || 'Taskpholio Notification';
-  const options = {
-    body: data.body || 'You have a new notification',
-    icon: '/next.svg',
-    badge: '/next.svg',
-    vibrate: [200, 100, 200],
-    data: {
-      url: data.url || '/',
-      notificationId: data.notificationId
-    },
-    actions: [
-      { action: 'open', title: 'Open' },
-      { action: 'close', title: 'Close' }
-    ],
-    tag: data.tag || 'taskpholio-notification',
-    requireInteraction: false
-  };
-  
-  event.waitUntil(
-    self.registration.showNotification(title, options)
-  );
-});
-
-// Notification click
-self.addEventListener('notificationclick', (event) => {
-  console.log('[Service Worker] Notification clicked');
-  
-  event.notification.close();
-  
-  if (event.action === 'close') {
+  if (isNavigationRequest(request)) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, copy));
+          return response;
+        })
+        .catch(async () => {
+          const cached = await caches.match(request);
+          return cached || caches.match("/offline");
+        })
+    );
     return;
   }
-  
-  const urlToOpen = event.notification.data.url || '/';
-  
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then((windowClients) => {
-        // Check if there is already a window open
-        for (let client of windowClients) {
-          if (client.url === urlToOpen && 'focus' in client) {
-            return client.focus();
-          }
-        }
-        
-        // If no window is open, open a new one
-        if (clients.openWindow) {
-          return clients.openWindow(urlToOpen);
-        }
-      })
+
+  event.respondWith(
+    caches.match(request).then((cached) => {
+      if (cached) return cached;
+
+      return fetch(request)
+        .then((response) => {
+          if (!response || response.status !== 200 || response.type !== "basic") return response;
+          const copy = response.clone();
+          caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, copy));
+          return response;
+        })
+        .catch(() => undefined);
+    })
   );
 });
 
-// Background sync
-self.addEventListener('sync', (event) => {
-  console.log('[Service Worker] Background sync');
-  
-  if (event.tag === 'sync-tasks') {
-    event.waitUntil(syncTasks());
+self.addEventListener("push", (event) => {
+  let payload = {};
+  if (event.data) {
+    try {
+      payload = event.data.json();
+    } catch {
+      payload = { body: event.data.text() };
+    }
   }
+
+  const title = payload.title || "Taskpholio";
+  const options = {
+    body: payload.body || "You have a new update.",
+    icon: "/icons/icon-192x192.png",
+    badge: "/icons/icon-96x96.png",
+    data: {
+      url: payload.url || "/dashboard",
+    },
+    tag: payload.tag || "taskpholio-update",
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
-async function syncTasks() {
-  // Implement background sync logic here
-  console.log('[Service Worker] Syncing tasks...');
-}
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const urlToOpen = event.notification?.data?.url || "/dashboard";
+
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
+      for (const client of windowClients) {
+        if (client.url.includes(self.location.origin) && "focus" in client) {
+          client.navigate(urlToOpen);
+          return client.focus();
+        }
+      }
+      return clients.openWindow(urlToOpen);
+    })
+  );
+});

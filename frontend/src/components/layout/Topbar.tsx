@@ -5,6 +5,7 @@ import { useUIStore } from "@/store/uiStore";
 import { useAuthStore } from "@/store/authStore";
 import Link from "next/link";
 import NotificationCenter from "../notifications/NotificationCenter";
+import PWAInstallPrompt from "@/components/pwa/PWAInstallPrompt";
 import { getDisplayName, getInitial } from "@/lib/utils";
 import "./layout.css";
 
@@ -30,6 +31,8 @@ export default function Topbar({ title }: Props) {
           <input type="text" placeholder="Search tasks, members..." aria-label="Search dashboard" />
           <span className="topbar-search-kbd">⌘K</span>
         </div>
+
+        <PWAInstallPrompt />
 
         <button onClick={toggleTheme} className="btn-icon">
           {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}

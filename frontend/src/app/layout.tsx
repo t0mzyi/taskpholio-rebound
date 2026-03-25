@@ -7,8 +7,11 @@ import LogRocketInit from "@/components/LogRocketInit";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    // Keep service workers production-only to avoid stale chunk/cache issues in local dev.
-    if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
+    const shouldRegisterSW =
+      "serviceWorker" in navigator &&
+      (process.env.NODE_ENV === "production" || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+
+    if (shouldRegisterSW) {
       window.addEventListener("load", () => {
         navigator.serviceWorker
           .register("/service-worker.js")
@@ -21,20 +24,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       });
     }
 
-    if ("serviceWorker" in navigator && process.env.NODE_ENV !== "production") {
-      navigator.serviceWorker.getRegistrations().then((registrations) => {
-        registrations.forEach((registration) => registration.unregister());
-      });
-
-      if ("caches" in window) {
-        caches.keys().then((keys) => {
-          keys
-            .filter((key) => key.startsWith("taskpholio-"))
-            .forEach((key) => caches.delete(key));
-        });
-      }
-    }
-
     // Request notification permission
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission();
@@ -45,12 +34,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className="dark">
       <head>
         <link rel="manifest" href="/manifest.json" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
-        <meta name="theme-color" content="#0a0a0f" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="theme-color" content="#0b1020" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Taskpholio" />
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
       </head>
       <body>
         <LogRocketInit />
