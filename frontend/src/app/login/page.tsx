@@ -118,10 +118,7 @@ export default function LoginPage() {
           </form>
 
           <p className="auth-footer">
-            Don&apos;t have an account?{" "}
-            <Link href="/register" className="auth-link">
-              Create one
-            </Link>
+            Accounts are created by CEO/CTO from the Admin Panel.
           </p>
         </div>
       </motion.div>

@@ -4,6 +4,7 @@ import { Moon, Sun, Search } from "lucide-react";
 import { useUIStore } from "@/store/uiStore";
 import { useAuthStore } from "@/store/authStore";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import NotificationCenter from "../notifications/NotificationCenter";
 import PWAInstallPrompt from "@/components/pwa/PWAInstallPrompt";
 import { getDisplayName, getInitial } from "@/lib/utils";
@@ -16,10 +17,25 @@ interface Props {
 export default function Topbar({ title }: Props) {
   const { user } = useAuthStore();
   const { theme, toggleTheme } = useUIStore();
+  const pathname = usePathname();
   const [failedAvatarUrls, setFailedAvatarUrls] = useState<Record<string, true>>({});
+
+  const searchPlaceholderMap: Record<string, string> = {
+    "/dashboard": "Search tasks, teams...",
+    "/dashboard/tasks": "Search tasks...",
+    "/dashboard/teams": "Search teams...",
+    "/dashboard/notifications": "Search notifications...",
+    "/dashboard/meetings": "Search schedules...",
+    "/dashboard/analytics": "Search analytics...",
+    "/dashboard/pending": "Search pending tasks...",
+    "/dashboard/settings": "Search settings...",
+    "/dashboard/admin": "Search users...",
+    "/dashboard/profile": "Search profile...",
+  };
 
   const displayName = getDisplayName(user?.name, user?.email);
   const avatarUrl = user?.avatar && !failedAvatarUrls[user.avatar] ? user.avatar : null;
+  const searchPlaceholder = searchPlaceholderMap[pathname] || "Search tasks, members...";
 
   return (
     <header className="topbar-container">
@@ -28,7 +44,7 @@ export default function Topbar({ title }: Props) {
       <div className="topbar-actions">
         <div className="topbar-search">
           <Search size={14} className="topbar-search-icon" />
-          <input type="text" placeholder="Search tasks, members..." aria-label="Search dashboard" />
+          <input type="text" placeholder={searchPlaceholder} aria-label="Search dashboard" />
           <span className="topbar-search-kbd">⌘K</span>
         </div>
 

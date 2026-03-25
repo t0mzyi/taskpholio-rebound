@@ -8,6 +8,7 @@ import { useUIStore } from "@/store/uiStore";
 import { registerPushSubscription } from "@/lib/pushSubscription";
 import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
+import MobileBottomNav from "@/components/layout/MobileBottomNav";
 import { usePathname } from "next/navigation";
 import "@/components/layout/layout.css";
 import "@/app/dashboard/screens.css";
@@ -63,9 +64,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    registerPushSubscription().catch((error) => {
-      console.error("Push registration failed:", error);
-    });
+    const attemptRegistration = () => {
+      if (document.visibilityState === "hidden") return;
+      registerPushSubscription().catch((error) => {
+        console.error("Push registration failed:", error);
+      });
+    };
+
+    attemptRegistration();
+    window.addEventListener("focus", attemptRegistration);
+    document.addEventListener("visibilitychange", attemptRegistration);
+
+    return () => {
+      window.removeEventListener("focus", attemptRegistration);
+      document.removeEventListener("visibilitychange", attemptRegistration);
+    };
   }, [isAuthenticated]);
 
   // Supabase Realtime Subscriptions
@@ -96,6 +109,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <main className="dashboard-content">
           {children}
         </main>
+        <MobileBottomNav />
       </div>
     </div>
   );

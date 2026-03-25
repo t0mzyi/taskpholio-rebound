@@ -30,12 +30,15 @@ export default function Sidebar() {
   const { user, logout } = useAuthStore();
   const { sidebarOpen, toggleSidebar, setSidebar } = useUIStore();
   const [isCompact, setIsCompact] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const displayName = getDisplayName(user?.name, user?.email);
   const userInitial = getInitial(user?.name, user?.email);
 
   useEffect(() => {
     const syncSidebarForViewport = () => {
+      const mobile = window.innerWidth <= 1024;
       const compact = window.innerWidth <= 1100;
+      setIsMobile(mobile);
       setIsCompact(compact);
       if (compact) setSidebar(false);
     };
@@ -51,6 +54,10 @@ export default function Sidebar() {
     ...(canManageAdmin ? [adminNav] : []),
     settingsNav
   ];
+
+  if (isMobile) {
+    return null;
+  }
 
   return (
     <motion.aside

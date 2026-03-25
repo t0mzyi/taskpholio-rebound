@@ -1,16 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Shield, Globe, Clock, Zap, Lock, Download, Trash2, Camera } from "lucide-react";
+import { ChangeEvent, useMemo, useRef, useState } from "react";
+import { Shield, Globe, Clock, Zap, Lock, Download, Trash2, Camera, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { getDisplayName, getInitial, normalizeUserRole } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
+import { uploadAttachments } from "@/lib/uploadAttachments";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
   const { user, setAuth, token } = useAuthStore();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [fullName, setFullName] = useState(getDisplayName(user?.name, user?.email));
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const teamName = useMemo(() => {
     if (!user?.team) return "No Team";
@@ -33,6 +36,31 @@ export default function SettingsPage() {
     }
   };
 
+  const handleAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user?._id) return;
+
+    setUploadingAvatar(true);
+    try {
+      const result = await uploadAttachments([file], { imageOnly: true, maxSizeBytes: 5 * 1024 * 1024 });
+      if (!result.uploaded.length) {
+        throw new Error(result.failed[0]?.reason || "Avatar upload failed.");
+      }
+
+      const avatarUrl = result.uploaded[0].fileUrl;
+      const { error } = await supabase.from("profiles").update({ avatar_url: avatarUrl }).eq("id", user._id);
+      if (error) throw error;
+
+      setAuth({ ...user, avatar: avatarUrl }, token || "");
+      toast.success("Profile photo updated");
+    } catch (error: any) {
+      toast.error(error?.message || "Unable to update profile photo.");
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  };
+
   if (!user) {
     return <div className="saas-empty">Loading settings...</div>;
   }
@@ -50,14 +78,29 @@ export default function SettingsPage() {
       <section className="saas-settings-grid">
         <aside style={{ display: "grid", gap: "0.9rem" }}>
           <article className="saas-glass saas-settings-card">
-            <div className="saas-profile-avatar">{getInitial(user?.name, user?.email)}</div>
+            <div className="saas-profile-avatar" style={{ overflow: "hidden" }}>
+              {user.avatar ? (
+                <img src={user.avatar} alt={getDisplayName(user?.name, user?.email)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                getInitial(user?.name, user?.email)
+              )}
+            </div>
             <button
               type="button"
               className="saas-btn-secondary"
               style={{ position: "relative", top: "-0.8rem", left: "50%", transform: "translateX(-50%)" }}
+              onClick={() => avatarInputRef.current?.click()}
+              disabled={uploadingAvatar}
             >
-              <Camera size={13} /> Update
+              {uploadingAvatar ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />} Update
             </button>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarChange}
+              className="hidden"
+            />
 
             <div style={{ textAlign: "center", marginTop: "-0.25rem" }}>
               <p className="saas-team-title">{getDisplayName(user?.name, user?.email)}</p>

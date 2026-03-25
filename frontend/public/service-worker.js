@@ -4,6 +4,7 @@ const RUNTIME_CACHE = `taskpholio-runtime-${CACHE_VERSION}`;
 
 const APP_SHELL = [
   "/",
+  "/login",
   "/offline",
   "/manifest.json",
   "/icons/icon-192x192.png",

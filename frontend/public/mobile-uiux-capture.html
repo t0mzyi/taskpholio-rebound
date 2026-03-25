@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Taskpholio Mobile UIUX</title>
+  <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+  <style>
+    :root {
+      --bg: #050916;
+      --surface: #0e1430;
+      --surface-2: #141d3f;
+      --border: rgba(130, 150, 255, 0.24);
+      --text: #f3f6ff;
+      --muted: #93a1d1;
+      --primary: #6a6fff;
+      --primary-2: #4d8bff;
+      --danger: #ff6a7c;
+      --warn: #ffcf5f;
+      --ok: #57d7a0;
+      --radius-card: 16px;
+      --radius-pill: 999px;
+      --shadow: 0 14px 36px rgba(0, 0, 0, 0.42);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, "Segoe UI", Roboto, system-ui, sans-serif;
+      background:
+        radial-gradient(1000px 700px at 10% -15%, rgba(110, 120, 255, 0.22), transparent 55%),
+        radial-gradient(1000px 700px at 100% 0%, rgba(50, 90, 255, 0.2), transparent 55%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .canvas {
+      padding: 36px;
+      display: grid;
+      grid-template-columns: repeat(3, 390px);
+      gap: 26px;
+      justify-content: center;
+    }
+
+    .phone {
+      width: 390px;
+      height: 844px;
+      background: linear-gradient(165deg, #070c22 0%, #0a1130 55%, #090f28 100%);
+      border: 1px solid var(--border);
+      border-radius: 36px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      position: relative;
+      padding: 14px 14px 88px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .search {
+      flex: 1;
+      height: 42px;
+      border-radius: 12px;
+      border: 1px solid rgba(138, 152, 255, 0.25);
+      background: rgba(18, 27, 63, 0.78);
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      font-size: 13px;
+      letter-spacing: 0.01em;
+    }
+
+    .circle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid rgba(148, 162, 255, 0.35);
+      background: rgba(19, 28, 64, 0.84);
+    }
+
+    .title-eyebrow {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #8096ff;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 33px;
+      line-height: 1.06;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      margin-top: 6px;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .cards-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .card {
+      border-radius: var(--radius-card);
+      border: 1px solid var(--border);
+      background: linear-gradient(165deg, rgba(18, 26, 64, 0.95), rgba(16, 23, 54, 0.92));
+      padding: 12px;
+      position: relative;
+    }
+
+    .kpi-label {
+      color: #8ea0dc;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 10px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .kpi-value {
+      font-size: 30px;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .small {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .section {
+      margin-bottom: 10px;
+    }
+
+    .section h2 {
+      margin: 0 0 8px;
+      font-size: 21px;
+      letter-spacing: -0.01em;
+    }
+
+    .chips {
+      display: flex;
+      gap: 8px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    .chip {
+      height: 30px;
+      padding: 0 12px;
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(130, 145, 238, 0.38);
+      color: #b5c0ef;
+      display: inline-flex;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(17, 24, 60, 0.92);
+      white-space: nowrap;
+    }
+
+    .chip.active {
+      background: linear-gradient(160deg, #6267ff, #5267ff);
+      color: white;
+      border-color: transparent;
+      box-shadow: 0 8px 20px rgba(86, 104, 255, 0.35);
+    }
+
+    .task-card {
+      border-radius: 14px;
+      border: 1px solid rgba(132, 151, 255, 0.22);
+      background: rgba(14, 21, 51, 0.9);
+      padding: 12px;
+      margin-bottom: 8px;
+    }
+
+    .task-title {
+      font-size: 16px;
+      font-weight: 650;
+      margin: 0 0 6px;
+      line-height: 1.25;
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .status {
+      border-radius: var(--radius-pill);
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .status.info { background: rgba(106, 111, 255, 0.2); color: #aeb9ff; border: 1px solid rgba(106, 111, 255, 0.45); }
+    .status.warn { background: rgba(255, 186, 89, 0.16); color: #ffd07d; border: 1px solid rgba(255, 191, 96, 0.45); }
+    .status.ok { background: rgba(87, 215, 160, 0.18); color: #8de8c2; border: 1px solid rgba(87, 215, 160, 0.45); }
+    .status.danger { background: rgba(255, 106, 124, 0.17); color: #ff9cab; border: 1px solid rgba(255, 106, 124, 0.45); }
+
+    .mini-list .row {
+      border-top: 1px solid rgba(130, 150, 255, 0.15);
+      padding: 10px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .mini-list .row:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .floating {
+      position: absolute;
+      right: 18px;
+      bottom: 96px;
+      width: 54px;
+      height: 54px;
+      border-radius: 16px;
+      background: linear-gradient(160deg, var(--primary), var(--primary-2));
+      display: grid;
+      place-items: center;
+      font-size: 28px;
+      line-height: 1;
+      font-weight: 500;
+      box-shadow: 0 12px 28px rgba(77, 119, 255, 0.45);
+    }
+
+    .bottom-nav {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 14px;
+      height: 70px;
+      border-radius: 18px;
+      border: 1px solid rgba(126, 146, 255, 0.28);
+      background: rgba(14, 21, 53, 0.95);
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      align-items: center;
+      padding: 7px 4px;
+      backdrop-filter: blur(6px);
+    }
+
+    .nav-item {
+      text-align: center;
+      color: #8fa1df;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .nav-dot {
+      width: 22px;
+      height: 22px;
+      border-radius: 8px;
+      margin: 0 auto 5px;
+      background: rgba(106, 120, 200, 0.3);
+    }
+
+    .nav-item.active {
+      color: #f2f5ff;
+    }
+
+    .nav-item.active .nav-dot {
+      background: linear-gradient(160deg, #6569ff, #4d82ff);
+      box-shadow: 0 8px 14px rgba(90, 116, 255, 0.42);
+    }
+
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      margin-top: 8px;
+      font-size: 11px;
+      color: #9fb0e6;
+    }
+
+    .calendar span {
+      height: 28px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: rgba(21, 30, 71, 0.6);
+    }
+
+    .calendar .selected {
+      background: rgba(100, 112, 255, 0.35);
+      border: 1px solid rgba(130, 145, 255, 0.55);
+      color: #fff;
+    }
+
+    .danger-box {
+      border-radius: 14px;
+      border: 1px solid rgba(255, 106, 124, 0.42);
+      background: rgba(42, 11, 24, 0.54);
+      padding: 12px;
+      margin-top: 10px;
+    }
+
+    .danger-title {
+      color: #ff8ea0;
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="canvas">
+    <section class="phone">
+      <div class="topbar">
+        <div class="search">Search tasks, teams...</div>
+        <div class="circle"></div>
+      </div>
+      <div class="title-eyebrow">Overview</div>
+      <h1>Good evening, Devasurya</h1>
+      <p class="subtitle">Execution visibility and action-first intelligence from mobile.</p>
+      <div class="cards-2">
+        <div class="card">
+          <div class="kpi-label">Total Tasks</div>
+          <div class="kpi-value">24</div>
+          <div class="small">Across all squads</div>
+        </div>
+        <div class="card">
+          <div class="kpi-label">In Progress</div>
+          <div class="kpi-value">6</div>
+          <div class="small">High urgency items</div>
+        </div>
+      </div>
+      <div class="card section">
+        <h2>Task Flow (7D)</h2>
+        <div class="small">Created vs completed momentum</div>
+        <div style="height: 96px; margin-top: 10px; border-radius: 12px; border: 1px solid rgba(126, 144, 248, 0.24); background: linear-gradient(180deg, rgba(44, 60, 132, 0.32), rgba(25, 33, 77, 0.28));"></div>
+      </div>
+      <div class="card section mini-list">
+        <h2>Today</h2>
+        <div class="row"><span>Design sprint review</span><span class="status info">7:30 PM</span></div>
+        <div class="row"><span>Client update deck</span><span class="status warn">Overdue</span></div>
+        <div class="row"><span>Security checklist</span><span class="status ok">Done</span></div>
+      </div>
+      <div class="floating">+</div>
+      <nav class="bottom-nav">
+        <div class="nav-item active"><div class="nav-dot"></div>Home</div>
+        <div class="nav-item"><div class="nav-dot"></div>Tasks</div>
+        <div class="nav-item"><div class="nav-dot"></div>Teams</div>
+        <div class="nav-item"><div class="nav-dot"></div>Alerts</div>
+        <div class="nav-item"><div class="nav-dot"></div>More</div>
+      </nav>
+    </section>
+
+    <section class="phone">
+      <div class="topbar">
+        <div class="search">Search tasks...</div>
+        <div class="circle"></div>
+      </div>
+      <div class="title-eyebrow">Task Board</div>
+      <h1>Tasks</h1>
+      <p class="subtitle">Direct, team and public tasks in one mobile workflow.</p>
+      <div class="chips">
+        <div class="chip active">All</div>
+        <div class="chip">Critical</div>
+        <div class="chip">High</div>
+        <div class="chip">Medium</div>
+      </div>
+      <div class="task-card">
+        <p class="task-title">Design social media poster set</p>
+        <div class="small">Owner: Paul Sabu</div>
+        <div class="meta-row">
+          <span>Due Mar 26</span>
+          <span class="status info">In Progress</span>
+        </div>
+      </div>
+      <div class="task-card">
+        <p class="task-title">Q2 roadmap stakeholder review</p>
+        <div class="small">Owner: Devasurya M</div>
+        <div class="meta-row">
+          <span>Due Mar 28</span>
+          <span class="status warn">High</span>
+        </div>
+      </div>
+      <div class="task-card">
+        <p class="task-title">Finalize onboarding checklist</p>
+        <div class="small">Owner: Mujthab</div>
+        <div class="meta-row">
+          <span>Due Apr 01</span>
+          <span class="status ok">Ready</span>
+        </div>
+      </div>
+      <div class="floating">+</div>
+      <nav class="bottom-nav">
+        <div class="nav-item"><div class="nav-dot"></div>Home</div>
+        <div class="nav-item active"><div class="nav-dot"></div>Tasks</div>
+        <div class="nav-item"><div class="nav-dot"></div>Teams</div>
+        <div class="nav-item"><div class="nav-dot"></div>Alerts</div>
+        <div class="nav-item"><div class="nav-dot"></div>More</div>
+      </nav>
+    </section>
+
+    <section class="phone">
+      <div class="topbar">
+        <div class="search">Search teams...</div>
+        <div class="circle"></div>
+      </div>
+      <div class="title-eyebrow">Organization</div>
+      <h1>Teams</h1>
+      <p class="subtitle">Squad structure and members optimized for compact view.</p>
+      <div class="card section">
+        <h2>Technical Team</h2>
+        <div class="small">Engineering & development</div>
+        <div class="mini-list" style="margin-top: 10px;">
+          <div class="row"><span>Jaideep Dev</span><span class="status info">Member</span></div>
+          <div class="row"><span>Mujthab</span><span class="status info">Member</span></div>
+        </div>
+      </div>
+      <div class="card section">
+        <h2>Social Media Team</h2>
+        <div class="small">Content and growth</div>
+        <div class="mini-list" style="margin-top: 10px;">
+          <div class="row"><span>Adil</span><span class="status info">Member</span></div>
+          <div class="row"><span>Paul Sabu</span><span class="status info">Member</span></div>
+        </div>
+      </div>
+      <div class="card section">
+        <h2>All Members</h2>
+        <div class="mini-list" style="margin-top: 8px;">
+          <div class="row"><span>Rizwan</span><span class="small">Cybersecurity</span></div>
+          <div class="row"><span>Devasurya M</span><span class="small">CTO</span></div>
+        </div>
+      </div>
+      <nav class="bottom-nav">
+        <div class="nav-item"><div class="nav-dot"></div>Home</div>
+        <div class="nav-item"><div class="nav-dot"></div>Tasks</div>
+        <div class="nav-item active"><div class="nav-dot"></div>Teams</div>
+        <div class="nav-item"><div class="nav-dot"></div>Alerts</div>
+        <div class="nav-item"><div class="nav-dot"></div>More</div>
+      </nav>
+    </section>
+
+    <section class="phone">
+      <div class="topbar">
+        <div class="search">Search notifications...</div>
+        <div class="circle"></div>
+      </div>
+      <div class="title-eyebrow">Real-time Updates</div>
+      <h1>Alerts</h1>
+      <p class="subtitle">Unread-first notification center for execution signals.</p>
+      <div class="chips">
+        <div class="chip active">Unread</div>
+        <div class="chip">All</div>
+        <div class="chip">Members</div>
+      </div>
+      <div class="task-card">
+        <p class="task-title">Task status updated</p>
+        <div class="small">Paul Sabu marked social poster as In Progress</div>
+        <div class="meta-row"><span>2 min ago</span><span class="status info">New</span></div>
+      </div>
+      <div class="task-card">
+        <p class="task-title">New member added</p>
+        <div class="small">Mujthab joined squad deployment</div>
+        <div class="meta-row"><span>7 hr ago</span><span class="status ok">Member</span></div>
+      </div>
+      <div class="task-card">
+        <p class="task-title">Deadline risk detected</p>
+        <div class="small">Critical task due in less than 12 hours</div>
+        <div class="meta-row"><span>Today</span><span class="status danger">Urgent</span></div>
+      </div>
+      <nav class="bottom-nav">
+        <div class="nav-item"><div class="nav-dot"></div>Home</div>
+        <div class="nav-item"><div class="nav-dot"></div>Tasks</div>
+        <div class="nav-item"><div class="nav-dot"></div>Teams</div>
+        <div class="nav-item active"><div class="nav-dot"></div>Alerts</div>
+        <div class="nav-item"><div class="nav-dot"></div>More</div>
+      </nav>
+    </section>
+
+    <section class="phone">
+      <div class="topbar">
+        <div class="search">Search schedules...</div>
+        <div class="circle"></div>
+      </div>
+      <div class="title-eyebrow">Scheduling</div>
+      <h1>Meetings</h1>
+      <p class="subtitle">Command center for team syncs and decision sessions.</p>
+      <div class="card section">
+        <h2>Next Meeting</h2>
+        <div class="small">Weekly sync • Today • 5:30 PM</div>
+        <div class="chips" style="margin-top: 12px;">
+          <div class="chip active">Join Meeting</div>
+          <div class="chip">View Details</div>
+        </div>
+      </div>
+      <div class="card section">
+        <h2>March 2026</h2>
+        <div class="calendar">
+          <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span>
+          <span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span>
+          <span>15</span><span>16</span><span>17</span><span class="selected">18</span><span>19</span><span>20</span><span>21</span>
+        </div>
+      </div>
+      <div class="card section mini-list">
+        <h2>Meeting Notes</h2>
+        <div class="row"><span>Response protocol finalization</span><span class="small">Draft</span></div>
+        <div class="row"><span>Attendance confirmation</span><span class="small">Pending</span></div>
+      </div>
+      <nav class="bottom-nav">
+        <div class="nav-item"><div class="nav-dot"></div>Home</div>
+        <div class="nav-item"><div class="nav-dot"></div>Tasks</div>
+        <div class="nav-item"><div class="nav-dot"></div>Teams</div>
+        <div class="nav-item"><div class="nav-dot"></div>Alerts</div>
+        <div class="nav-item active"><div class="nav-dot"></div>More</div>
+      </nav>
+    </section>
+
+    <section class="phone">
+      <div class="topbar">
+        <div class="search">Search analytics...</div>
+        <div class="circle"></div>
+      </div>
+      <div class="title-eyebrow">Advanced Analytics</div>
+      <h1>Analytics</h1>
+      <p class="subtitle">Mobile telemetry snapshots and completion trends.</p>
+      <div class="cards-2">
+        <div class="card">
+          <div class="kpi-label">Completion</div>
+          <div class="kpi-value">68%</div>
+          <div class="small">This week</div>
+        </div>
+        <div class="card">
+          <div class="kpi-label">Velocity</div>
+          <div class="kpi-value">1.9</div>
+          <div class="small">Tasks/member</div>
+        </div>
+      </div>
+      <div class="card section">
+        <h2>Status Distribution</h2>
+        <div style="width: 170px; height: 170px; border-radius: 50%; border: 24px solid #666cf5; border-right-color: #66d4ab; margin: 10px auto 2px;"></div>
+      </div>
+      <div class="card section">
+        <h2>Team Performance</h2>
+        <div style="height: 120px; border-radius: 12px; border: 1px solid rgba(126, 144, 248, 0.24); background: linear-gradient(180deg, rgba(38, 54, 120, 0.3), rgba(22, 29, 64, 0.28));"></div>
+      </div>
+      <nav class="bottom-nav">
+        <div class="nav-item"><div class="nav-dot"></div>Home</div>
+        <div class="nav-item"><div class="nav-dot"></div>Tasks</div>
+        <div class="nav-item"><div class="nav-dot"></div>Teams</div>
+        <div class="nav-item"><div class="nav-dot"></div>Alerts</div>
+        <div class="nav-item active"><div class="nav-dot"></div>More</div>
+      </nav>
+    </section>
+
+    <section class="phone">
+      <div class="topbar">
+        <div class="search">Search users...</div>
+        <div class="circle"></div>
+      </div>
+      <div class="title-eyebrow">Admin Panel</div>
+      <h1>Admin</h1>
+      <p class="subtitle">Manage users, roles and teams from mobile operations.</p>
+      <div class="chips">
+        <div class="chip active">Users</div>
+        <div class="chip">Teams</div>
+        <div class="chip">Roles</div>
+      </div>
+      <div class="task-card">
+        <p class="task-title">Mujthab</p>
+        <div class="small">mousinaj@gmail.com</div>
+        <div class="meta-row"><span class="status ok">Member</span><span class="small">Technical Team</span></div>
+      </div>
+      <div class="task-card">
+        <p class="task-title">Rizwan</p>
+        <div class="small">rizwansvlog@gmail.com</div>
+        <div class="meta-row"><span class="status ok">Member</span><span class="small">Cybersecurity</span></div>
+      </div>
+      <div class="task-card">
+        <p class="task-title">Devasurya M</p>
+        <div class="small">devasurya669@gmail.com</div>
+        <div class="meta-row"><span class="status info">CTO</span><span class="small">No team</span></div>
+      </div>
+      <div class="floating">+</div>
+      <nav class="bottom-nav">
+        <div class="nav-item"><div class="nav-dot"></div>Home</div>
+        <div class="nav-item"><div class="nav-dot"></div>Tasks</div>
+        <div class="nav-item"><div class="nav-dot"></div>Teams</div>
+        <div class="nav-item"><div class="nav-dot"></div>Alerts</div>
+        <div class="nav-item active"><div class="nav-dot"></div>More</div>
+      </nav>
+    </section>
+
+    <section class="phone">
+      <div class="topbar">
+        <div class="search">Search settings...</div>
+        <div class="circle"></div>
+      </div>
+      <div class="title-eyebrow">Configuration</div>
+      <h1>Settings</h1>
+      <p class="subtitle">Account, security and system preferences in mobile form.</p>
+      <div class="card section">
+        <h2>Profile</h2>
+        <div class="mini-list">
+          <div class="row"><span>Name</span><span class="small">Devasurya M</span></div>
+          <div class="row"><span>Email</span><span class="small">devasurya669@gmail.com</span></div>
+          <div class="row"><span>Role</span><span class="small">CTO</span></div>
+        </div>
+      </div>
+      <div class="card section mini-list">
+        <h2>System Parameters</h2>
+        <div class="row"><span>Language</span><span class="small">English</span></div>
+        <div class="row"><span>Timezone</span><span class="small">UTC+05:30</span></div>
+        <div class="row"><span>Performance</span><span class="small">High</span></div>
+      </div>
+      <div class="danger-box">
+        <div class="danger-title">Danger Zone</div>
+        <div class="small">Delete account and export actions are isolated for safety.</div>
+        <div class="chips" style="margin-top: 10px;">
+          <div class="chip" style="border-color: rgba(255, 123, 143, 0.5); color: #ffb7c3;">Delete Account</div>
+          <div class="chip">Export Data</div>
+        </div>
+      </div>
+      <nav class="bottom-nav">
+        <div class="nav-item"><div class="nav-dot"></div>Home</div>
+        <div class="nav-item"><div class="nav-dot"></div>Tasks</div>
+        <div class="nav-item"><div class="nav-dot"></div>Teams</div>
+        <div class="nav-item"><div class="nav-dot"></div>Alerts</div>
+        <div class="nav-item active"><div class="nav-dot"></div>More</div>
+      </nav>
+    </section>
+
+    <section class="phone">
+      <div class="topbar">
+        <div class="search">Search pending tasks...</div>
+        <div class="circle"></div>
+      </div>
+      <div class="title-eyebrow">Execution Risk Desk</div>
+      <h1>Pending</h1>
+      <p class="subtitle">Prioritized queue for unfinished and overdue work.</p>
+      <div class="cards-2">
+        <div class="card">
+          <div class="kpi-label">Open</div>
+          <div class="kpi-value">11</div>
+          <div class="small">Awaiting action</div>
+        </div>
+        <div class="card">
+          <div class="kpi-label">Overdue</div>
+          <div class="kpi-value" style="color: #ff9cad;">3</div>
+          <div class="small">Needs escalation</div>
+        </div>
+      </div>
+      <div class="task-card">
+        <p class="task-title">Client deck approvals</p>
+        <div class="small">Owner: Devasurya M</div>
+        <div class="meta-row"><span>Due Today</span><span class="status danger">Overdue</span></div>
+      </div>
+      <div class="task-card">
+        <p class="task-title">Meeting notes finalization</p>
+        <div class="small">Owner: Technical Team</div>
+        <div class="meta-row"><span>Due Tomorrow</span><span class="status warn">At Risk</span></div>
+      </div>
+      <div class="task-card">
+        <p class="task-title">Analytics sanity check</p>
+        <div class="small">Owner: Adil</div>
+        <div class="meta-row"><span>Due Mar 30</span><span class="status info">Open</span></div>
+      </div>
+      <nav class="bottom-nav">
+        <div class="nav-item"><div class="nav-dot"></div>Home</div>
+        <div class="nav-item active"><div class="nav-dot"></div>Tasks</div>
+        <div class="nav-item"><div class="nav-dot"></div>Teams</div>
+        <div class="nav-item"><div class="nav-dot"></div>Alerts</div>
+        <div class="nav-item"><div class="nav-dot"></div>More</div>
+      </nav>
+    </section>
+  </div>
+</body>
+</html>

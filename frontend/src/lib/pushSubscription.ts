@@ -31,8 +31,18 @@ export async function registerPushSubscription(): Promise<void> {
 
   if (permission !== "granted") return;
 
-  const registration = await navigator.serviceWorker.getRegistration();
+  let registration = await navigator.serviceWorker.getRegistration();
+  if (!registration) {
+    registration = await navigator.serviceWorker.register("/service-worker.js");
+  }
   if (!registration) return;
+
+  if (!registration.active) {
+    await navigator.serviceWorker.ready;
+    registration = await navigator.serviceWorker.getRegistration();
+    if (!registration) return;
+  }
+
   let subscription = await registration.pushManager.getSubscription();
   if (!subscription) {
     subscription = await registration.pushManager.subscribe({
