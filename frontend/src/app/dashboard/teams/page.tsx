@@ -148,19 +148,19 @@ export default function TeamsPage() {
            {/* Executive Tier */}
            <div className="space-y-4">
               <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest block pl-2">Executive Command</span>
-              {hierarchy?.ceo.map(u => <UserBadge key={u._id} user={u} />)}
+              {hierarchy?.ceo?.length ? hierarchy.ceo.map(u => <UserBadge key={u._id} user={u} />) : <UserBadge user={null} />}
            </div>
 
            {/* Technical Tier */}
            <div className="space-y-4">
               <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest block pl-2">Technical Directorate</span>
-              {hierarchy?.ctos.map(u => <UserBadge key={u._id} user={u} />)}
+              {hierarchy?.ctos?.length ? hierarchy.ctos.map(u => <UserBadge key={u._id} user={u} />) : <UserBadge user={null} />}
            </div>
 
            {/* Operational Tier */}
            <div className="space-y-4">
               <span className="text-[10px] font-black text-orange-400 uppercase tracking-widest block pl-2">Field Operations</span>
-              {hierarchy?.leads.map(u => <UserBadge key={u._id} user={u} />)}
+              {hierarchy?.leads?.length ? hierarchy.leads.map(u => <UserBadge key={u._id} user={u} />) : <UserBadge user={null} />}
            </div>
         </div>
       </section>
@@ -177,6 +177,23 @@ export default function TeamsPage() {
           </div>
         </div>
 
+        {filteredTeams.length === 0 ? (
+          <div className="glass rounded-[2rem] p-10 border border-dashed border-border/60 text-center space-y-4">
+            <p className="text-sm font-black uppercase tracking-widest text-muted-foreground">No squads found</p>
+            <p className="text-sm text-muted-foreground">
+              Create your first tactical squad to start assigning members and mission work.
+            </p>
+            <div className="flex justify-center">
+              <button
+                onClick={handleAssembleTeam}
+                className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl font-black text-xs tracking-widest hover:scale-105 transition-transform"
+              >
+                <UserPlus className="w-4 h-4" />
+                CREATE FIRST SQUAD
+              </button>
+            </div>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
           {filteredTeams.map((team, idx) => (
             <motion.div
@@ -244,6 +261,7 @@ export default function TeamsPage() {
             </motion.div>
           ))}
         </div>
+        )}
       </section>
 
       <AssembleSquadModal 
