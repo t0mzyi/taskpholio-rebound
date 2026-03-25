@@ -32,6 +32,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const pathname = usePathname();
   const { fetchTasks } = useTaskStore();
+  const { fetchNotifications } = useNotificationStore();
 
   const [isMounted, setIsMounted] = useState(false);
 
@@ -80,6 +81,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       document.removeEventListener("visibilitychange", attemptRegistration);
     };
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const syncFeeds = () => {
+      if (document.visibilityState === "hidden") return;
+      fetchNotifications().catch((error) => {
+        console.error("Notification sync failed:", error);
+      });
+      registerPushSubscription().catch((error) => {
+        console.error("Push re-subscription failed:", error);
+      });
+    };
+
+    syncFeeds();
+    const intervalId = window.setInterval(syncFeeds, 15000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [isAuthenticated, fetchNotifications]);
 
   // Supabase Realtime Subscriptions
   useEffect(() => {

@@ -104,7 +104,12 @@ serve(async (req) => {
               auth: sub.auth,
             },
           } as webpush.PushSubscription,
-          messagePayload
+          messagePayload,
+          {
+            TTL: 60,
+            urgency: "high",
+            topic: payload.tag || "taskpholio-update",
+          }
         );
         sent += 1;
       } catch (error: any) {

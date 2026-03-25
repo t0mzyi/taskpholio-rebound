@@ -13,6 +13,14 @@ export async function sendPushToUsers(payload: PushPayload): Promise<void> {
   if (userIds.length === 0) return;
 
   try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+
+    if (!accessToken) {
+      console.error("Push invoke skipped: no active session token.");
+      return;
+    }
+
     const { data, error } = await supabase.functions.invoke("send-push", {
       body: {
         userIds,
@@ -20,6 +28,9 @@ export async function sendPushToUsers(payload: PushPayload): Promise<void> {
         body: payload.body,
         url: payload.url || "/dashboard/notifications",
         tag: payload.tag || "taskpholio-update",
+      },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
       },
     });
 

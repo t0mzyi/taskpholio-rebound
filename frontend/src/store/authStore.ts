@@ -6,6 +6,7 @@ import api from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { getDisplayName, normalizeUserRole } from "@/lib/utils";
+import { registerPushSubscription } from "@/lib/pushSubscription";
 
 interface AuthState {
   user: User | null;
@@ -104,6 +105,21 @@ export const useAuthStore = create<AuthState>()(
           
           set({ user, token: session.access_token, isAuthenticated: true, isLoading: false });
           console.log("[AUTH] Login state updated for user:", user.name);
+
+          if (typeof window !== "undefined" && "Notification" in window) {
+            const ensurePush = async () => {
+              const permission =
+                window.Notification.permission === "granted"
+                  ? "granted"
+                  : await window.Notification.requestPermission();
+              if (permission === "granted") {
+                await registerPushSubscription();
+              }
+            };
+            ensurePush().catch((pushError) => {
+              console.error("[AUTH] Push setup after login failed:", pushError);
+            });
+          }
         } catch (err: any) {
           console.error("[AUTH] Login failed:", err.message);
           set({ isLoading: false });
@@ -190,6 +206,12 @@ export const useAuthStore = create<AuthState>()(
           };
 
           set({ user, isAuthenticated: true });
+
+          if (typeof window !== "undefined" && "Notification" in window && window.Notification.permission === "granted") {
+            registerPushSubscription().catch((pushError) => {
+              console.error("[AUTH] Push refresh during session restore failed:", pushError);
+            });
+          }
         } catch (error) {
           set({ user: null, token: null, isAuthenticated: false });
           localStorage.removeItem("taskpholio_token");
