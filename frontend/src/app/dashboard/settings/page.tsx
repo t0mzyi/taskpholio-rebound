@@ -1,7 +1,7 @@
 "use client";
 
 import { ChangeEvent, useMemo, useRef, useState } from "react";
-import { Shield, Globe, Clock, Zap, Lock, Download, Trash2, Camera, Loader2 } from "lucide-react";
+import { Shield, Globe, Clock, Camera, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { getDisplayName, getInitial, normalizeUserRole } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
@@ -14,6 +14,10 @@ export default function SettingsPage() {
   const [fullName, setFullName] = useState(getDisplayName(user?.name, user?.email));
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const teamName = useMemo(() => {
     if (!user?.team) return "No Team";
@@ -58,6 +62,40 @@ export default function SettingsPage() {
     } finally {
       setUploadingAvatar(false);
       if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  };
+
+  const handlePasswordUpdate = async () => {
+    const trimmedPassword = newPassword.trim();
+    const trimmedConfirm = confirmPassword.trim();
+
+    if (!trimmedPassword || !trimmedConfirm) {
+      toast.error("Please enter and confirm the new password.");
+      return;
+    }
+
+    if (trimmedPassword.length < 8) {
+      toast.error("Password must be at least 8 characters.");
+      return;
+    }
+
+    if (trimmedPassword !== trimmedConfirm) {
+      toast.error("Password confirmation does not match.");
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: trimmedPassword });
+      if (error) throw error;
+      toast.success("Password updated successfully.");
+      setNewPassword("");
+      setConfirmPassword("");
+      setShowPasswordForm(false);
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update password.");
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -149,21 +187,52 @@ export default function SettingsPage() {
             </p>
 
             <div className="saas-list">
-              <button type="button" className="saas-quick-link">Change Password</button>
-              <button type="button" className="saas-quick-link">Two-Factor Auth</button>
-              <button type="button" className="saas-quick-link">Active Sessions</button>
+              <button type="button" className="saas-quick-link" onClick={() => setShowPasswordForm((prev) => !prev)}>
+                {showPasswordForm ? "Cancel Password Change" : "Change Password"}
+              </button>
+
+              {showPasswordForm && (
+                <div className="saas-list-item" style={{ marginTop: "0.5rem" }}>
+                  <div style={{ display: "grid", gap: "0.5rem" }}>
+                    <label className="saas-settings-field">
+                      <span className="saas-settings-label">New Password</span>
+                      <input
+                        type="password"
+                        className="saas-settings-value"
+                        value={newPassword}
+                        onChange={(event) => setNewPassword(event.target.value)}
+                        placeholder="Enter new password"
+                      />
+                    </label>
+                    <label className="saas-settings-field">
+                      <span className="saas-settings-label">Confirm Password</span>
+                      <input
+                        type="password"
+                        className="saas-settings-value"
+                        value={confirmPassword}
+                        onChange={(event) => setConfirmPassword(event.target.value)}
+                        placeholder="Re-enter new password"
+                      />
+                    </label>
+
+                    <button type="button" className="saas-btn-primary" onClick={handlePasswordUpdate} disabled={changingPassword}>
+                      {changingPassword ? "Updating..." : "Update Password"}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </article>
         </aside>
 
         <section style={{ display: "grid", gap: "0.9rem" }}>
           <article className="saas-glass saas-settings-card">
-            <div className="saas-pill-row" style={{ justifyContent: "space-between" }}>
-              <div className="saas-pill-row">
-                <Zap size={15} style={{ color: "#8f97ff" }} />
-                <p className="saas-card-title" style={{ fontSize: "1rem" }}>System Parameters</p>
+              <div className="saas-pill-row" style={{ justifyContent: "space-between" }}>
+                <div className="saas-pill-row">
+                  <Globe size={15} style={{ color: "#8f97ff" }} />
+                  <p className="saas-card-title" style={{ fontSize: "1rem" }}>System Parameters</p>
+                </div>
               </div>
-            </div>
 
             <div className="saas-list">
               <div className="saas-list-item">
@@ -181,56 +250,6 @@ export default function SettingsPage() {
                 </div>
                 <p className="saas-list-title">UTC+05:30 (IST)</p>
               </div>
-
-              <div className="saas-list-item">
-                <div className="saas-pill-row" style={{ justifyContent: "space-between" }}>
-                  <span className="saas-pill-row"><Zap size={13} /> <span className="saas-settings-label">Interface Velocity</span></span>
-                  <span className="saas-team-subtitle">Optimized for Mission Speed</span>
-                </div>
-                <p className="saas-list-title">High Performance</p>
-              </div>
-
-              <div className="saas-list-item">
-                <div className="saas-pill-row" style={{ justifyContent: "space-between" }}>
-                  <span className="saas-pill-row"><Lock size={13} /> <span className="saas-settings-label">Data Privacy</span></span>
-                  <span className="saas-team-subtitle">Metadata Redacted by Default</span>
-                </div>
-                <p className="saas-list-title">Strict Encryption</p>
-              </div>
-            </div>
-          </article>
-
-          <article className="saas-glass saas-settings-card">
-            <div className="saas-pill-row">
-              <div style={{ width: "0.42rem", height: "0.42rem", borderRadius: "999px", background: "#22c55e" }} />
-              <p className="saas-card-title" style={{ fontSize: "1rem" }}>Application Matrix</p>
-            </div>
-
-            <div style={{ marginTop: "0.7rem", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: "0.55rem" }}>
-              {[
-                ["Matrix Code", "v1.4.2-PROD"],
-                ["Core Protocol", "NextFS-Elite"],
-                ["Build Status", "Stable"],
-                ["Last Deploy", "Mar 25, 2026"],
-              ].map(([label, value]) => (
-                <div key={label} className="saas-list-item" style={{ marginTop: 0 }}>
-                  <p className="saas-settings-label">{label}</p>
-                  <p className="saas-list-title">{value}</p>
-                </div>
-              ))}
-            </div>
-          </article>
-
-          <article className="saas-glass saas-settings-card saas-danger-zone">
-            <p className="saas-danger-title">Danger Zone</p>
-            <p className="saas-card-sub">These actions are irreversible. Please proceed with caution.</p>
-            <div className="saas-pill-row" style={{ marginTop: "0.7rem" }}>
-              <button type="button" className="saas-btn-secondary" style={{ borderColor: "rgba(239,68,68,0.5)", color: "#fca5a5" }}>
-                <Trash2 size={14} /> Delete Account
-              </button>
-              <button type="button" className="saas-btn-secondary">
-                <Download size={14} /> Export Data
-              </button>
             </div>
           </article>
         </section>

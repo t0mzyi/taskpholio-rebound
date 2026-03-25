@@ -13,7 +13,18 @@ const APP_SHELL = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => cache.addAll(APP_SHELL))
+    (async () => {
+      const cache = await caches.open(STATIC_CACHE);
+      await Promise.allSettled(
+        APP_SHELL.map(async (asset) => {
+          try {
+            await cache.add(asset);
+          } catch (error) {
+            console.warn("[SW] Failed to cache shell asset:", asset, error);
+          }
+        })
+      );
+    })()
   );
   self.skipWaiting();
 });
@@ -66,7 +77,7 @@ self.addEventListener("fetch", (event) => {
           caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, copy));
           return response;
         })
-        .catch(() => undefined);
+        .catch(() => new Response("Offline", { status: 503, statusText: "Offline" }));
     })
   );
 });

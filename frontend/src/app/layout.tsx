@@ -11,22 +11,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       "serviceWorker" in navigator &&
       (process.env.NODE_ENV === "production" || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
-    if (shouldRegisterSW) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker
-          .register("/service-worker.js")
-          .then((registration) => {
-            console.log("✅ Service Worker registered:", registration.scope);
-          })
-          .catch((error) => {
-            console.error("❌ Service Worker registration failed:", error);
-          });
-      });
-    }
+    const registerServiceWorker = () => {
+      navigator.serviceWorker
+        .register("/service-worker.js")
+        .then((registration) => {
+          console.log("✅ Service Worker registered:", registration.scope);
+        })
+        .catch((error) => {
+          console.error("❌ Service Worker registration failed:", error);
+        });
+    };
 
-    // Request notification permission
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission();
+    if (shouldRegisterSW) {
+      if (document.readyState === "complete") {
+        registerServiceWorker();
+      } else {
+        window.addEventListener("load", registerServiceWorker, { once: true });
+      }
     }
   }, []);
 
