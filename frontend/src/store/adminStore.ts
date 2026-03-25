@@ -101,8 +101,37 @@ export const useAdminStore = create<AdminState>()((set, get) => ({
   },
 
   createUser: async (data) => {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !session?.access_token) {
+    const getFreshAccessToken = async (): Promise<string | null> => {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session?.access_token) return null;
+
+      const expiresSoon =
+        typeof session.expires_at === "number" &&
+        session.expires_at * 1000 <= Date.now() + 30_000;
+
+      if (!expiresSoon) return session.access_token;
+
+      const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+      if (!refreshError && refreshed?.session?.access_token) {
+        return refreshed.session.access_token;
+      }
+
+      return session.access_token;
+    };
+
+    const isAuthFailure = (message: string, status?: number): boolean => {
+      const normalized = (message || "").toLowerCase();
+      return (
+        status === 401 ||
+        normalized.includes("invalid token") ||
+        normalized.includes("authentication failed") ||
+        normalized.includes("jwt expired") ||
+        normalized.includes("missing authorization")
+      );
+    };
+
+    let accessToken = await getFreshAccessToken();
+    if (!accessToken) {
       throw new Error("Your session has expired. Please sign in again.");
     }
 
@@ -150,13 +179,12 @@ export const useAdminStore = create<AdminState>()((set, get) => ({
       return { message, status };
     };
 
-    let accessToken = session.access_token;
     let { data: result, error } = await invokeCreateMember(accessToken);
 
     if (error) {
       let parsed = await parseEdgeError(error);
 
-      if (parsed.status === 401) {
+      if (isAuthFailure(parsed.message, parsed.status)) {
         const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
         if (!refreshError && refreshed?.session?.access_token) {
           accessToken = refreshed.session.access_token;
@@ -193,10 +221,41 @@ export const useAdminStore = create<AdminState>()((set, get) => ({
       }
     }
 
+    if (!error && (result?.success === false || result?.error)) {
+      const firstMessage = (result?.error || "Creation failed").toString();
+      if (isAuthFailure(firstMessage)) {
+        const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+        if (!refreshError && refreshed?.session?.access_token) {
+          accessToken = refreshed.session.access_token;
+          const retry = await invokeCreateMember(accessToken);
+          result = retry.data;
+          error = retry.error;
+        }
+      }
+    }
+
+    if (error) {
+      const parsed = await parseEdgeError(error);
+      const normalized = parsed.message.toLowerCase();
+      if (isAuthFailure(parsed.message, parsed.status)) {
+        throw new Error("Your session has expired. Please sign in again.");
+      }
+      if (parsed.status === 404 || (normalized.includes("function") && normalized.includes("not found"))) {
+        throw new Error("The create-member function is not deployed.");
+      }
+      if (normalized.includes("failed to send a request to the edge function") || normalized.includes("networkerror")) {
+        throw new Error("Cannot reach user creation service. Please check your internet and deploy status.");
+      }
+      if (parsed.status && parsed.status >= 500) {
+        throw new Error(`Create-member service failed (${parsed.status}). ${parsed.message}`);
+      }
+      throw new Error(parsed.message || "Failed to create member");
+    }
+
     if (result?.success === false || result?.error) {
       const message = (result?.error || "Creation failed").toString();
       const normalized = message.toLowerCase();
-      if (normalized.includes("missing authorization") || normalized.includes("invalid token") || normalized.includes("authentication failed")) {
+      if (isAuthFailure(message)) {
         throw new Error("Your session has expired. Please sign in again.");
       }
       if (normalized.includes("forbidden")) {

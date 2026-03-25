@@ -20,7 +20,7 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ success: false, error: "Missing Authorization header" }), {
-        status: 200,
+        status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -30,7 +30,7 @@ serve(async (req) => {
 
     if (authError || !caller) {
       return new Response(JSON.stringify({ success: false, error: "Authentication failed: " + (authError?.message ?? "Invalid token") }), {
-        status: 200,
+        status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -43,14 +43,14 @@ serve(async (req) => {
 
     if (profileFetchError) {
       return new Response(JSON.stringify({ success: false, error: "Security check failed: No profile found for caller." }), {
-        status: 200,
+        status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     if (!["ceo", "cto", "admin"].includes(callerProfile?.role?.toLowerCase() ?? "")) {
       return new Response(JSON.stringify({ success: false, error: "Forbidden: Operations access required. Role: " + callerProfile?.role }), {
-        status: 200,
+        status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -67,7 +67,7 @@ serve(async (req) => {
 
     if (createAuthUserError) {
       return new Response(JSON.stringify({ success: false, error: "Auth error: " + createAuthUserError.message }), {
-        status: 200,
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -75,7 +75,7 @@ serve(async (req) => {
     const createdUserId = newUser.user?.id;
     if (!createdUserId) {
       return new Response(JSON.stringify({ success: false, error: "Auth user created without id." }), {
-        status: 200,
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -91,7 +91,7 @@ serve(async (req) => {
 
     if (upsertError) {
       return new Response(JSON.stringify({ success: false, error: "Profile sync error: " + upsertError.message }), {
-        status: 200,
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -114,7 +114,7 @@ serve(async (req) => {
     });
   } catch (err: any) {
     return new Response(JSON.stringify({ success: false, error: "Global system crash: " + err.message }), {
-      status: 200,
+      status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
