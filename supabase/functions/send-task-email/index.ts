@@ -17,6 +17,19 @@ type TaskEmailRequest = {
   isTeamTask?: boolean;
 };
 
+type Recipient = {
+  id: string;
+  full_name?: string | null;
+  email: string;
+};
+
+const isValidEmail = (value?: string | null): value is string => {
+  if (!value) return false;
+  const normalized = value.trim();
+  if (!normalized) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized);
+};
+
 const escapeHtml = (value: string): string =>
   value
     .replaceAll("&", "&amp;")
@@ -145,7 +158,40 @@ serve(async (req) => {
       });
     }
 
-    const validRecipients = (recipients || []).filter((entry: any) => Boolean(entry?.email));
+    const recipientMap = new Map<string, { full_name?: string | null; email?: string | null }>();
+    (recipients || []).forEach((entry: any) => {
+      recipientMap.set(entry.id, {
+        full_name: entry?.full_name ?? null,
+        email: entry?.email ?? null,
+      });
+    });
+
+    const resolvedRecipients: Recipient[] = [];
+    for (const userId of userIds) {
+      const profile = recipientMap.get(userId);
+      let resolvedEmail = profile?.email?.trim() || "";
+      let resolvedName = profile?.full_name || null;
+
+      if (!isValidEmail(resolvedEmail)) {
+        const { data: authUserData, error: authUserError } = await admin.auth.admin.getUserById(userId);
+        if (!authUserError) {
+          resolvedEmail = authUserData?.user?.email?.trim() || "";
+          if (!resolvedName) {
+            resolvedName = authUserData?.user?.user_metadata?.full_name || authUserData?.user?.email || null;
+          }
+        }
+      }
+
+      if (!isValidEmail(resolvedEmail)) continue;
+
+      resolvedRecipients.push({
+        id: userId,
+        full_name: resolvedName,
+        email: resolvedEmail,
+      });
+    }
+
+    const validRecipients = resolvedRecipients;
     if (!validRecipients.length) {
       return new Response(JSON.stringify({ success: true, sent: 0, failed: 0, skipped: userIds.length }), {
         status: 200,
