@@ -39,6 +39,27 @@ const TEAM_SECTIONS: TeamSection[] = [
 
 const normalize = (value: string | undefined | null) => (value || "").toLowerCase().trim();
 
+function MemberAvatar({ member }: { member: any }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const avatarUrl = typeof member?.avatar === "string" ? member.avatar.trim() : "";
+  const hasImage = avatarUrl.length > 0 && !imageFailed;
+
+  if (hasImage) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={`${getDisplayName(member?.name, member?.email)} avatar`}
+        className="saas-member-avatar saas-member-avatar-image"
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        onError={() => setImageFailed(true)}
+      />
+    );
+  }
+
+  return <span className="saas-member-avatar">{getInitial(member?.name, member?.email)}</span>;
+}
+
 export default function TeamsPage() {
   const { teams, fetchTeams, isLoading } = useAdminStore();
   const [search, setSearch] = useState("");
@@ -150,7 +171,7 @@ export default function TeamsPage() {
                   members.map((member: any) => (
                     <div key={member?._id || member?.email} className="saas-member-row">
                       <div className="saas-member-left">
-                        <span className="saas-member-avatar">{getInitial(member?.name, member?.email)}</span>
+                        <MemberAvatar member={member} />
                         <div style={{ minWidth: 0 }}>
                           <p className="saas-member-name">{getDisplayName(member?.name, member?.email)}</p>
                           <p className="saas-member-mail">{member?.email || "No email"}</p>
@@ -191,7 +212,7 @@ export default function TeamsPage() {
                 <tr key={member?._id || member?.email}>
                   <td>
                     <div className="saas-member-left">
-                      <span className="saas-member-avatar">{getInitial(member?.name, member?.email)}</span>
+                      <MemberAvatar member={member} />
                       <span className="saas-member-name">{getDisplayName(member?.name, member?.email)}</span>
                     </div>
                   </td>

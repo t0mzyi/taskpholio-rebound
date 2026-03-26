@@ -651,6 +651,12 @@
   flex-shrink: 0;
 }
 
+.saas-member-avatar-image {
+  object-fit: cover;
+  border: 1px solid rgba(100, 109, 168, 0.48);
+  background: rgba(20, 24, 44, 0.9);
+}
+
 .saas-member-name {
   font-size: 0.78rem;
   color: #f2f4ff;
