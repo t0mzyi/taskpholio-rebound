@@ -1,6 +1,17 @@
 import { supabase } from './supabase'
 
 const TASK_FIELDS = 'id, title, description, status, priority, visibility, assigned_to, assigned_team, due_date, completed_at, created_at, updated_at, created_by'
+const STATUS_STEP_ORDER = { pending: 0, in_progress: 1, completed: 2 }
+
+function normalizeProgressStatus(status) {
+  if (status === 'completed') return 'completed'
+  if (status === 'in_progress' || status === 'in-progress') return 'in_progress'
+  return 'pending'
+}
+
+function isBackwardProgressTransition(currentStatus, nextStatus) {
+  return STATUS_STEP_ORDER[nextStatus] < STATUS_STEP_ORDER[currentStatus]
+}
 
 export async function fetchTasks(filters = {}) {
   let q = supabase
@@ -60,16 +71,44 @@ export async function createTask(taskData) {
 }
 
 export async function updateTask(id, updates) {
+  const nextUpdates = { ...updates }
+
+  if (typeof updates.status === 'string') {
+    const nextStatus = normalizeProgressStatus(updates.status)
+    if (nextStatus !== updates.status) {
+      throw new Error('Only Started, In Progress, and Completed are allowed.')
+    }
+
+    const { data: currentTask, error: currentError } = await supabase
+      .from('tasks')
+      .select('status')
+      .eq('id', id)
+      .single()
+    if (currentError) throw currentError
+
+    const currentStatus = normalizeProgressStatus(currentTask?.status)
+    if (isBackwardProgressTransition(currentStatus, nextStatus)) {
+      throw new Error('Task progress cannot move backwards once advanced.')
+    }
+
+    if (currentStatus === nextStatus) {
+      return fetchTaskById(id)
+    }
+
+    nextUpdates.status = nextStatus
+    nextUpdates.completed_at = nextStatus === 'completed' ? new Date().toISOString() : null
+  }
+
   const { data, error } = await supabase
     .from('tasks')
-    .update(updates)
+    .update(nextUpdates)
     .eq('id', id)
     .select(`${TASK_FIELDS}, assignee:profiles!tasks_assigned_to_fkey(id, full_name, team)`)
     .single()
   if (error) throw error
 
   // Notify task creator on completion
-  if (updates.status === 'completed' && data.created_by && data.created_by !== data.assigned_to) {
+  if (nextUpdates.status === 'completed' && data.created_by && data.created_by !== data.assigned_to) {
     await supabase.from('notifications').insert({
       user_id: data.created_by,
       type: 'task_completed',

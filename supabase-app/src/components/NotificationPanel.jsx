@@ -1,6 +1,6 @@
 import React from 'react'
 import {
-  RiCheckDoubleLine, RiFileList3Line, RiCalendarEventLine, RiInformationLine
+  RiCheckDoubleLine, RiDeleteBinLine, RiFileList3Line, RiCalendarEventLine, RiInformationLine
 } from 'react-icons/ri'
 import { useNotifications } from '../context/NotificationContext'
 import '../styles/components.css'
@@ -32,17 +32,24 @@ function timeAgo(dateString) {
 }
 
 export default function NotificationPanel({ onClose }) {
-  const { notifications, unreadCount, markAsRead, markAllRead } = useNotifications()
+  const { notifications, unreadCount, markRead, markAllRead, clearAll } = useNotifications()
 
   return (
     <div className="notif-panel">
       <div className="notif-panel-header">
         <div className="notif-panel-title">Notifications {unreadCount > 0 && `(${unreadCount})`}</div>
-        {unreadCount > 0 && (
-          <button className="btn-ghost" style={{ padding: '4px 8px', height: 'auto', fontSize: 11 }} onClick={markAllRead}>
-            <RiCheckDoubleLine size={13} style={{ marginRight: 4 }} /> Mark all read
-          </button>
-        )}
+        <div className="notif-panel-actions">
+          {unreadCount > 0 && (
+            <button className="btn-ghost notif-panel-action-btn" onClick={markAllRead}>
+              <RiCheckDoubleLine size={13} style={{ marginRight: 4 }} /> Mark all read
+            </button>
+          )}
+          {notifications.length > 0 && (
+            <button className="btn-ghost notif-panel-action-btn danger" onClick={clearAll}>
+              <RiDeleteBinLine size={13} style={{ marginRight: 4 }} /> Clear all
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="notif-list">
@@ -52,7 +59,7 @@ export default function NotificationPanel({ onClose }) {
           </div>
         ) : (
           notifications.map(n => (
-            <div key={n.id} className={`notif-item ${!n.read ? 'unread' : ''}`} onClick={() => { if (!n.read) markAsRead(n.id) }}>
+            <div key={n.id} className={`notif-item ${!n.read ? 'unread' : ''}`} onClick={() => { if (!n.read) markRead(n.id) }}>
               <div className="notif-icon-box" style={{ background: getBg(n.type) }}>
                 {getIcon(n.type)}
               </div>

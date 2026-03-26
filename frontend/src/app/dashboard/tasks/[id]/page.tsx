@@ -117,8 +117,8 @@ export default function TaskDetailPage() {
     try {
       await updateTaskStatus(task._id, status);
       toast.success("Progress step updated.");
-    } catch {
-      toast.error("Failed to update progress step.");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update progress step.");
     } finally {
       setIsUpdatingStep(false);
     }
@@ -196,6 +196,18 @@ export default function TaskDetailPage() {
     return "Started";
   };
 
+  const normalizeProgressStep = (status: string): "pending" | "in-progress" | "completed" => {
+    if (status === "completed") return "completed";
+    if (status === "in-progress") return "in-progress";
+    return "pending";
+  };
+
+  const stepIndex = (status: "pending" | "in-progress" | "completed"): number => {
+    if (status === "completed") return 2;
+    if (status === "in-progress") return 1;
+    return 0;
+  };
+
   if (isLoading && !task) return (
     <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
       <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
@@ -227,10 +239,11 @@ export default function TaskDetailPage() {
   const canUpdateProgress = Boolean(me?._id && (isDirectAssignee || isTeamAssignee));
   const myTeamProgressStatus =
     isTeamTask && me?._id
-      ? task.teamProgress?.find((entry) => entry.userId === me._id)?.status || "pending"
-      : task.status;
+      ? normalizeProgressStep(task.teamProgress?.find((entry) => entry.userId === me._id)?.status || "pending")
+      : normalizeProgressStep(task.status);
   const teamProgressEntries = task.teamProgress || [];
   const teamCompletedCount = teamProgressEntries.filter((entry) => entry.status === "completed").length;
+  const currentProgressStep = stepIndex(myTeamProgressStatus);
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-20">
@@ -321,43 +334,55 @@ export default function TaskDetailPage() {
                   { id: "in-progress", label: "In Progress", hint: "Show that the task is actively moving forward." },
                   { id: "completed", label: "Completed", hint: "Mark it done and unlock completion proof below." },
                 ] as const).map((step) => (
-                  <button
-                    key={step.id}
-                    type="button"
-                    onClick={() => handleStepUpdate(step.id)}
-                    disabled={isUpdatingStep}
-                    className={cn(
-                      "group flex min-h-[140px] flex-col rounded-2xl border px-4 py-4 text-left transition-all",
-                      myTeamProgressStatus === step.id
-                        ? "border-primary bg-primary/20 shadow-lg shadow-primary/20"
-                        : "border-border bg-secondary/30 hover:border-primary/40 hover:bg-secondary/50"
-                    )}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className={cn("text-sm font-black", myTeamProgressStatus === step.id ? "text-primary" : "text-foreground")}>
-                        {step.label}
-                      </span>
-                      <span
+                  (() => {
+                    const isCurrentStep = myTeamProgressStatus === step.id;
+                    const isPastStep = stepIndex(step.id) < currentProgressStep;
+                    const isLocked = isUpdatingStep || isCurrentStep || isPastStep;
+
+                    return (
+                      <button
+                        key={step.id}
+                        type="button"
+                        onClick={() => handleStepUpdate(step.id)}
+                        disabled={isLocked}
                         className={cn(
-                          "rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-widest",
-                          myTeamProgressStatus === step.id
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-background/60 text-muted-foreground"
+                          "group flex min-h-[140px] flex-col rounded-2xl border px-4 py-4 text-left transition-all",
+                          isCurrentStep
+                            ? "border-primary bg-primary/20 shadow-lg shadow-primary/20"
+                            : isPastStep
+                              ? "border-border bg-secondary/20 opacity-70 cursor-not-allowed"
+                              : "border-border bg-secondary/30 hover:border-primary/40 hover:bg-secondary/50"
                         )}
                       >
-                        {myTeamProgressStatus === step.id ? "Active" : "Set"}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{step.hint}</p>
-                    <p className={cn(
-                      "mt-auto pt-3 text-[11px] font-medium",
-                      myTeamProgressStatus === step.id ? "text-primary" : "text-muted-foreground/90"
-                    )}>
-                      {myTeamProgressStatus === step.id
-                        ? "Currently broadcasting this stage"
-                        : "Tap to update leadership"}
-                    </p>
-                  </button>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className={cn("text-sm font-black", isCurrentStep ? "text-primary" : "text-foreground")}>
+                            {step.label}
+                          </span>
+                          <span
+                            className={cn(
+                              "rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-widest",
+                              isCurrentStep
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-background/60 text-muted-foreground"
+                            )}
+                          >
+                            {isCurrentStep ? "Active" : isPastStep ? "Locked" : "Set"}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{step.hint}</p>
+                        <p className={cn(
+                          "mt-auto pt-3 text-[11px] font-medium",
+                          isCurrentStep ? "text-primary" : "text-muted-foreground/90"
+                        )}>
+                          {isCurrentStep
+                            ? "Currently broadcasting this stage"
+                            : isPastStep
+                              ? "Locked after progress advanced"
+                              : "Tap to update leadership"}
+                        </p>
+                      </button>
+                    );
+                  })()
                 ))}
               </div>
 

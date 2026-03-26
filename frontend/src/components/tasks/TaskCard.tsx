@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Calendar, MoreHorizontal, MessageSquare, Paperclip, 
   ChevronDown, ChevronUp, CheckCircle2, Clock, Play, 
-  ShieldCheck, Flag, Users, Tag
+  Flag, Users, Tag
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { useTaskStore } from "@/store/taskStore";
@@ -20,13 +20,16 @@ interface TaskCardProps {
 export default function TaskCard({ task, view = "grid" }: TaskCardProps) {
   const [expanded, setExpanded] = useState(false);
   const { updateTaskStatus } = useTaskStore();
+  const statusOrder = { pending: 0, "in-progress": 1, completed: 2 } as const;
+  const normalizedStatus = task.status === "completed" || task.status === "in-progress" ? task.status : "pending";
+  const currentStatusOrder = statusOrder[normalizedStatus as keyof typeof statusOrder];
 
   const handleStatusChange = async (newStatus: string) => {
     try {
       await updateTaskStatus(task._id, newStatus as any);
       toast.success(`Task status updated to ${newStatus}.`);
-    } catch (error) {
-      toast.error("Failed to update task status.");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update task status.");
     }
   };
 
@@ -177,20 +180,28 @@ export default function TaskCard({ task, view = "grid" }: TaskCardProps) {
                 </h5>
                 <div className="status-buttons">
                   {[
-                    { id: 'pending', label: 'Not Started', icon: <Clock size={12} /> },
+                    { id: 'pending', label: 'Started', icon: <Clock size={12} /> },
                     { id: 'in-progress', label: 'In Progress', icon: <Play size={12} /> },
-                    { id: 'blocked', label: 'Blocked', icon: <ShieldCheck size={12} /> },
                     { id: 'completed', label: 'Completed', icon: <CheckCircle2 size={12} /> }
                   ].map((status) => (
-                    <button
-                      key={status.id}
-                      onClick={() => handleStatusChange(status.id)}
-                      disabled={task.status === status.id}
-                      className={`status-btn ${task.status === status.id ? 'active' : ''}`}
-                    >
-                      {status.icon}
-                      {status.label}
-                    </button>
+                    (() => {
+                      const stepOrder = statusOrder[status.id as keyof typeof statusOrder];
+                      const isCurrentStatus = normalizedStatus === status.id;
+                      const isPastStatus = stepOrder < currentStatusOrder;
+                      const isDisabled = isCurrentStatus || isPastStatus;
+
+                      return (
+                        <button
+                          key={status.id}
+                          onClick={() => handleStatusChange(status.id)}
+                          disabled={isDisabled}
+                          className={`status-btn ${isCurrentStatus ? 'active' : ''}`}
+                        >
+                          {status.icon}
+                          {status.label}
+                        </button>
+                      );
+                    })()
                   ))}
                 </div>
               </div>

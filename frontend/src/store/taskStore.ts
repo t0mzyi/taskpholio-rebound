@@ -90,6 +90,25 @@ const statusLabel = (status: Task["status"]): string => {
   return "Started";
 };
 
+type ProgressStatus = "pending" | "in-progress" | "completed";
+
+const normalizeProgressStatus = (status: Task["status"] | string): ProgressStatus => {
+  if (status === "completed") return "completed";
+  if (status === "in-progress") return "in-progress";
+  return "pending";
+};
+
+const progressStepIndex = (status: Task["status"] | string): number => {
+  if (status === "completed") return 2;
+  if (status === "in-progress") return 1;
+  return 0;
+};
+
+const isBackwardProgressTransition = (
+  currentStatus: Task["status"] | string,
+  nextStatus: Task["status"] | string
+): boolean => progressStepIndex(nextStatus) < progressStepIndex(currentStatus);
+
 const buildAssignee = (profile: any): User | null => {
   if (!profile) return null;
   return {
@@ -654,6 +673,11 @@ export const useTaskStore = create<TaskState>()((set, get) => ({
   },
 
   updateTaskStatus: async (id, status) => {
+    const nextStatus = normalizeProgressStatus(status);
+    if (status !== nextStatus) {
+      throw new Error("Only Started, In Progress, and Completed status updates are allowed.");
+    }
+
     const actor = await resolveCurrentUser();
     const previousTask =
       get().currentTask?._id === id
@@ -712,9 +736,15 @@ export const useTaskStore = create<TaskState>()((set, get) => ({
         updatedAt: new Date().toISOString(),
       };
 
+      const currentActorStatus = normalizeProgressStatus(actorEntry.status);
+      if (isBackwardProgressTransition(currentActorStatus, nextStatus)) {
+        throw new Error("Task progress cannot move backwards once updated.");
+      }
+      if (currentActorStatus === nextStatus) return;
+
       progressMap.set(actor._id, {
         ...actorEntry,
-        status,
+        status: nextStatus,
         updatedAt: new Date().toISOString(),
       });
 
@@ -737,7 +767,7 @@ export const useTaskStore = create<TaskState>()((set, get) => ({
         {
           user: buildStoreUser(actor),
           action: "team_progress_updated",
-          details: `${actor?.name || "A teammate"} marked progress as ${statusLabel(status)} (${completedCount}/${totalMembers} completed)`,
+          details: `${actor?.name || "A teammate"} marked progress as ${statusLabel(nextStatus)} (${completedCount}/${totalMembers} completed)`,
           timestamp: new Date().toISOString(),
         },
       ];
@@ -747,6 +777,7 @@ export const useTaskStore = create<TaskState>()((set, get) => ({
         .update({
           status: toDbStatus(globalStatus),
           progress: nextProgress,
+          completed_at: globalStatus === "completed" ? new Date().toISOString() : null,
           team_progress: nextTeamProgress,
           activity: nextActivity,
         })
@@ -761,16 +792,28 @@ export const useTaskStore = create<TaskState>()((set, get) => ({
 
       upsertTaskInState(set, mappedTask);
       await createTaskStatusNotifications(mappedTask, globalStatus, {
-        actorStatus: status,
+        actorStatus: nextStatus,
         teamSummary: { completed: completedCount, total: totalMembers },
       });
       return;
     }
 
+    const currentStatus = normalizeProgressStatus(task.status);
+    if (isBackwardProgressTransition(currentStatus, nextStatus)) {
+      throw new Error("Task progress cannot move backwards once updated.");
+    }
+    if (currentStatus === nextStatus) return;
+
     set((state) => ({
       tasks: state.tasks.map((entry) =>
         entry._id === id
-          ? { ...entry, status, progress: progressFromStatus(status), updatedAt: new Date().toISOString() }
+          ? {
+              ...entry,
+              status: nextStatus,
+              progress: progressFromStatus(nextStatus),
+              completedAt: nextStatus === "completed" ? new Date().toISOString() : undefined,
+              updatedAt: new Date().toISOString(),
+            }
           : entry
       ),
     }));
@@ -778,7 +821,10 @@ export const useTaskStore = create<TaskState>()((set, get) => ({
     try {
       const { data: updated, error } = await supabase
         .from("tasks")
-        .update({ status: toDbStatus(status) })
+        .update({
+          status: toDbStatus(nextStatus),
+          completed_at: nextStatus === "completed" ? new Date().toISOString() : null,
+        })
         .eq("id", id)
         .select("*")
         .single();
@@ -791,8 +837,8 @@ export const useTaskStore = create<TaskState>()((set, get) => ({
           currentTask: state.currentTask?._id === id ? mappedTask : state.currentTask,
         }));
 
-        if ((previousTask?.status || "pending") !== status) {
-          await createTaskStatusNotifications(mappedTask, status);
+        if (normalizeProgressStatus(previousTask?.status || "pending") !== nextStatus) {
+          await createTaskStatusNotifications(mappedTask, nextStatus);
         }
       }
     } catch (err) {

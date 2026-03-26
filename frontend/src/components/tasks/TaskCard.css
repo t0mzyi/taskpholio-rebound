@@ -211,6 +211,12 @@
   background-color: var(--bg-accent-transparent);
   color: var(--text-primary);
 }
+.status-btn:disabled {
+  cursor: not-allowed;
+}
+.status-btn:disabled:not(.active) {
+  opacity: 0.55;
+}
 .status-btn.active {
   background-color: var(--bg-accent-transparent);
   border-color: var(--bg-accent);

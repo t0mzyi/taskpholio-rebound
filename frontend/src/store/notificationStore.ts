@@ -23,6 +23,7 @@ interface NotificationState {
   fetchNotifications: () => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
+  clearAllNotifications: () => Promise<void>;
   deleteNotification: (id: string) => Promise<void>;
   initRealtime: (userId: string) => void;
 }
@@ -106,6 +107,22 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       }));
     } catch (error) {
       console.error('Error marking all as read:', error);
+    }
+  },
+
+  clearAllNotifications: async () => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session?.user) return;
+
+      await supabase.from('notifications').delete().eq('user_id', sessionData.session.user.id);
+      set({
+        notifications: [],
+        unreadCount: 0,
+      });
+    } catch (error) {
+      console.error('Error clearing all notifications:', error);
+      throw error;
     }
   },
 

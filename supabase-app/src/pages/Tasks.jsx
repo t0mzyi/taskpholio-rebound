@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import {
-  RiAddLine, RiEditLine, RiDeleteBin7Line, RiTaskLine
+  RiAddLine, RiDeleteBin7Line, RiTaskLine
 } from 'react-icons/ri'
 import { useAuth } from '../context/AuthContext'
 import { useRole } from '../hooks/useRole'
@@ -18,10 +18,16 @@ const TABS = [
   { label: 'All',         value: 'all' },
   { label: 'Pending',     value: 'pending' },
   { label: 'In Progress', value: 'in_progress' },
-  { label: 'Completed',   value: 'completed' },
-  { label: 'Blocked',     value: 'blocked' },
   { label: 'My Tasks',    value: 'mine' },
 ]
+
+const STATUS_STEPS = [
+  { label: 'Started', value: 'pending' },
+  { label: 'In Progress', value: 'in_progress' },
+  { label: 'Completed', value: 'completed' },
+]
+
+const STATUS_STEP_ORDER = { pending: 0, in_progress: 1, completed: 2 }
 
 const TEAMS = [
   { value: 'technical_engine', label: 'Technical Engine' },
@@ -31,6 +37,14 @@ const TEAMS = [
 
 function isOverdue(dueDate) { return dueDate && new Date(dueDate) < new Date() }
 function fmtDate(d) { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }
+function normalizeTaskStep(status) {
+  if (status === 'completed') return 'completed'
+  if (status === 'in_progress' || status === 'in-progress') return 'in_progress'
+  return 'pending'
+}
+function isBackwardTransition(currentStatus, nextStatus) {
+  return STATUS_STEP_ORDER[nextStatus] < STATUS_STEP_ORDER[currentStatus]
+}
 
 export default function Tasks() {
   const { user } = useAuth()
@@ -43,6 +57,7 @@ export default function Tasks() {
   const [modalOpen, setModalOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
+  const [statusError, setStatusError] = useState('')
 
   // Form state
   const [title, setTitle] = useState('')
@@ -60,7 +75,7 @@ export default function Tasks() {
       if (tab !== 'all' && tab !== 'mine') filters.status = tab
       if (tab === 'mine') filters.assignedTo = user?.id
       const data = await fetchTasks(filters)
-      setTasks(data)
+      setTasks((data ?? []).filter(t => normalizeTaskStep(t.status) !== 'completed'))
     } catch (e) {
       console.error('fetchTasks error', e)
     } finally {
@@ -106,12 +121,22 @@ export default function Tasks() {
     }
   }
 
-  const handleStatusChange = async (taskId, newStatus) => {
+  const handleStatusChange = async (task, newStatus) => {
+    const currentStatus = normalizeTaskStep(task.status)
+    if (currentStatus === newStatus) return
+    if (isBackwardTransition(currentStatus, newStatus)) return
+
+    setStatusError('')
     try {
-      await updateTask(taskId, { status: newStatus })
-      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t))
+      const updatedTask = await updateTask(task.id, { status: newStatus })
+      setTasks(prev =>
+        prev
+          .map(t => t.id === task.id ? { ...t, ...updatedTask } : t)
+          .filter(t => normalizeTaskStep(t.status) !== 'completed')
+      )
     } catch (e) {
       console.error('Status update error', e)
+      setStatusError(e?.message ?? 'Unable to update task progress.')
     }
   }
 
@@ -159,6 +184,9 @@ export default function Tasks() {
           onChange={e => setSearch(e.target.value)}
         />
       </div>
+      {statusError && (
+        <p className="form-error" style={{ marginBottom: 10 }}>{statusError}</p>
+      )}
 
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
@@ -185,6 +213,8 @@ export default function Tasks() {
               {filtered.map((t, i) => {
                 const canEdit = isAdmin || t.assigned_to === user?.id
                 const overdue = isOverdue(t.due_date)
+                const normalizedStatus = normalizeTaskStep(t.status)
+                const currentStepIndex = STATUS_STEP_ORDER[normalizedStatus]
                 return (
                   <tr key={t.id}>
                     <td><span className="task-row-num">{i + 1}</span></td>
@@ -208,18 +238,28 @@ export default function Tasks() {
                     <td><PriorityBadge priority={t.priority} /></td>
                     <td>
                       {canEdit ? (
-                        <select
-                          className="status-select"
-                          value={t.status}
-                          onChange={e => handleStatusChange(t.id, e.target.value)}
-                        >
-                          <option value="pending">pending</option>
-                          <option value="in_progress">in progress</option>
-                          <option value="completed">completed</option>
-                          <option value="blocked">blocked</option>
-                        </select>
+                        <div className="task-step-group">
+                          {STATUS_STEPS.map(step => {
+                            const stepIndex = STATUS_STEP_ORDER[step.value]
+                            const isCurrent = step.value === normalizedStatus
+                            const isPast = stepIndex < currentStepIndex
+                            const isDisabled = isCurrent || isPast
+
+                            return (
+                              <button
+                                key={`${t.id}-${step.value}`}
+                                type="button"
+                                className={`task-step-btn ${isCurrent ? 'active' : ''}`}
+                                disabled={isDisabled}
+                                onClick={() => handleStatusChange(t, step.value)}
+                              >
+                                {step.label}
+                              </button>
+                            )
+                          })}
+                        </div>
                       ) : (
-                        <StatusBadge status={t.status} />
+                        <StatusBadge status={normalizedStatus} />
                       )}
                     </td>
                     <td>

@@ -55,8 +55,15 @@ export const NotificationProvider = ({ children }) => {
     setUnreadCount(prev => Math.max(0, prev - 1))
   }
 
+  const clearAll = async () => {
+    if (!user) return
+    await supabase.from('notifications').delete().eq('user_id', user.id)
+    setNotifications([])
+    setUnreadCount(0)
+  }
+
   return (
-    <NotifContext.Provider value={{ notifications, unreadCount, markAllRead, markRead, refetch: fetchNotifications }}>
+    <NotifContext.Provider value={{ notifications, unreadCount, markAllRead, markRead, clearAll, refetch: fetchNotifications }}>
       {children}
     </NotifContext.Provider>
   )

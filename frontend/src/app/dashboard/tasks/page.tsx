@@ -63,6 +63,8 @@ export default function TasksPage() {
   const filtered = useMemo(() => {
     const search = query.trim().toLowerCase();
     return tasks.filter((task) => {
+      if (task.status === "completed") return false;
+
       const matchSearch =
         !search ||
         task.title.toLowerCase().includes(search) ||

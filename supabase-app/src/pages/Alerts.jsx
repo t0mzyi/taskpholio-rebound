@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import {
   RiBellLine, RiTaskLine, RiCheckboxCircleLine,
-  RiUserAddLine, RiCalendarEventLine, RiCheckDoubleLine
+  RiUserAddLine, RiCalendarEventLine, RiCheckDoubleLine, RiDeleteBinLine
 } from 'react-icons/ri'
 import { useNotifications } from '../context/NotificationContext'
 import EmptyState from '../components/ui/EmptyState'
@@ -41,7 +41,7 @@ function matchesTab(tab, type) {
 }
 
 export default function Alerts() {
-  const { notifications, unreadCount, markAllRead, markRead } = useNotifications()
+  const { notifications, unreadCount, markAllRead, markRead, clearAll } = useNotifications()
   const [tab, setTab] = useState('all')
 
   const filtered = notifications.filter(n => matchesTab(tab, n.type))
@@ -60,11 +60,18 @@ export default function Alerts() {
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>Your workspace notifications</p>
         </div>
-        {unreadCount > 0 && (
-          <button className="btn-outline" onClick={markAllRead}>
-            <RiCheckDoubleLine size={15} /> Mark all read
-          </button>
-        )}
+        <div className="alerts-header-actions">
+          {unreadCount > 0 && (
+            <button className="btn-outline" onClick={markAllRead}>
+              <RiCheckDoubleLine size={15} /> Mark all read
+            </button>
+          )}
+          {notifications.length > 0 && (
+            <button className="btn-danger" onClick={clearAll}>
+              <RiDeleteBinLine size={15} /> Clear all
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="alerts-filter-bar">

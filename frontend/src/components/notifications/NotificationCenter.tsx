@@ -11,6 +11,7 @@ import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { registerPushSubscription } from "@/lib/pushSubscription";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 export default function NotificationCenter() {
   const router = useRouter();
@@ -22,7 +23,7 @@ export default function NotificationCenter() {
   const [requestingPermission, setRequestingPermission] = useState(false);
   const { 
     notifications, unreadCount, fetchNotifications, 
-    markAsRead, markAllAsRead, deleteNotification 
+    markAsRead, markAllAsRead, clearAllNotifications, deleteNotification 
   } = useNotificationStore();
 
   useEffect(() => {
@@ -105,6 +106,16 @@ export default function NotificationCenter() {
     }
   };
 
+  const handleClearAll = async () => {
+    if (notifications.length === 0) return;
+    try {
+      await clearAllNotifications();
+      toast.success("All notifications cleared.");
+    } catch {
+      toast.error("Unable to clear notifications.");
+    }
+  };
+
   return (
     <div className="relative">
       <motion.button
@@ -136,22 +147,25 @@ export default function NotificationCenter() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               className={cn(
-                "glass rounded-3xl border border-white/10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] z-50 overflow-hidden flex flex-col",
+                "notification-center-panel rounded-3xl z-50 overflow-hidden flex flex-col",
                 isMobile ? "fixed" : "absolute right-0 mt-3 w-96"
               )}
               style={
                 isMobile
                   ? {
-                      left: "0.75rem",
-                      right: "0.75rem",
-                      top: "calc(env(safe-area-inset-top) + 4.2rem)",
-                      maxHeight: "calc(100vh - 8.6rem)",
+                      left: "0",
+                      right: "0",
+                      width: "min(92vw, 420px)",
+                      marginLeft: "auto",
+                      marginRight: "auto",
+                      top: "calc(env(safe-area-inset-top) + 4.5rem)",
+                      maxHeight: "min(68vh, 560px)",
                     }
                   : undefined
               }
             >
               {/* Header */}
-              <div className="p-5 border-b border-white/5 bg-white/5">
+              <div className="notification-center-header p-5">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-lg font-black text-foreground tracking-tight">Intelligence Feed</h3>
@@ -161,34 +175,44 @@ export default function NotificationCenter() {
                     <X className="w-4 h-4" />
                   </button>
                 </div>
-                {unreadCount > 0 && (
-                  <button
-                    onClick={() => markAllAsRead()}
-                    className="text-[10px] font-black text-primary uppercase tracking-[0.2em] hover:text-primary/80 transition-colors"
-                  >
-                    Acknowledge All Updates
-                  </button>
-                )}
-                {notificationPermission !== "granted" && (
-                  <button
-                    onClick={handleEnableAlerts}
-                    disabled={requestingPermission || notificationPermission === "denied"}
-                    className="ml-3 text-[10px] font-black text-blue-300 uppercase tracking-[0.2em] hover:text-blue-200 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    {notificationPermission === "denied"
-                      ? "Alerts Blocked"
-                      : requestingPermission
-                        ? "Enabling..."
-                        : "Enable Alerts"}
-                  </button>
-                )}
+                <div className="notification-center-actions">
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={() => markAllAsRead()}
+                      className="notification-center-action-btn"
+                    >
+                      Acknowledge All Updates
+                    </button>
+                  )}
+                  {notifications.length > 0 && (
+                    <button
+                      onClick={handleClearAll}
+                      className="notification-center-action-btn danger"
+                    >
+                      Clear All
+                    </button>
+                  )}
+                  {notificationPermission !== "granted" && (
+                    <button
+                      onClick={handleEnableAlerts}
+                      disabled={requestingPermission || notificationPermission === "denied"}
+                      className="notification-center-action-btn neutral disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {notificationPermission === "denied"
+                        ? "Alerts Blocked"
+                        : requestingPermission
+                          ? "Enabling..."
+                          : "Enable Alerts"}
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* List */}
-              <div className="max-h-[500px] overflow-y-auto custom-scrollbar">
+              <div className="notification-center-list max-h-[500px] overflow-y-auto custom-scrollbar flex-1" style={{ minHeight: 0 }}>
                 {notifications.length === 0 ? (
-                  <div className="py-20 flex flex-col items-center justify-center text-center px-10">
-                    <div className="w-16 h-16 rounded-3xl bg-white/5 flex items-center justify-center mb-6">
+                  <div className="notification-center-empty py-20 flex flex-col items-center justify-center text-center px-10">
+                    <div className="w-16 h-16 rounded-3xl notification-center-empty-icon flex items-center justify-center mb-6">
                         <Bell className="w-8 h-8 text-muted-foreground/30" />
                     </div>
                     <h4 className="font-black text-sm text-foreground mb-2">Comms Line Clear</h4>
@@ -200,8 +224,8 @@ export default function NotificationCenter() {
                       <div
                         key={notif._id}
                         className={cn(
-                          "w-full text-left p-5 transition-all hover:bg-white/5 group relative cursor-pointer",
-                          !notif.read && "bg-primary/5 shadow-inner shadow-primary/5"
+                          "notification-center-item w-full text-left p-5 transition-all group relative cursor-pointer",
+                          !notif.read && "notification-center-item-unread shadow-inner shadow-primary/5"
                         )}
                         onClick={() => {
                           const href = resolveNotificationHref(notif);
@@ -223,7 +247,7 @@ export default function NotificationCenter() {
                       >
                         <div className="flex gap-4">
                           <div className={cn(
-                            "w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110",
+                            "notification-center-icon-shell w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110",
                             !notif.read ? "bg-primary/20 border border-primary/20" : "bg-white/5 border border-white/10"
                           )}>
                             {getIcon(notif.type)}
@@ -270,7 +294,7 @@ export default function NotificationCenter() {
               </div>
 
               {/* Footer */}
-              <div className="p-4 bg-white/5 border-t border-white/5 text-center">
+              <div className="notification-center-footer p-4 text-center">
                   <button className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.3em] hover:text-foreground transition-all">
                       Access Strategic Archive
                   </button>
