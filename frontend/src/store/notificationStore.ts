@@ -115,7 +115,12 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData?.session?.user) return;
 
-      await supabase.from('notifications').delete().eq('user_id', sessionData.session.user.id);
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', sessionData.session.user.id);
+      if (error) throw error;
+
       set({
         notifications: [],
         unreadCount: 0,

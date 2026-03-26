@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { RealtimeChannel } from "@supabase/supabase-js";
 import { sendPushToUsers } from "@/lib/pushNotifications";
+import { sendTaskAssignmentEmails } from "@/lib/emailNotifications";
 import { normalizeUserRole } from "@/lib/utils";
 
 interface TaskState {
@@ -430,13 +431,24 @@ const createAssignmentNotifications = async (task: Task) => {
   }
 
   if (rows.length > 0) {
+    const recipientIds = rows.map((row) => row.user_id);
     await supabase.from("notifications").insert(rows);
     await sendPushToUsers({
-      userIds: rows.map((row) => row.user_id),
+      userIds: recipientIds,
       title: task.teamId ? "New team task assigned" : "New task assigned",
       body: `${task.title} (${statusLabel(task.status)})`,
       url: `/dashboard/tasks/${task._id}`,
       tag: `task-assigned-${task._id}`,
+    });
+    await sendTaskAssignmentEmails({
+      userIds: recipientIds,
+      taskId: task._id,
+      taskTitle: task.title,
+      taskDescription: task.description,
+      dueDate: task.dueDate,
+      assignerName: task.createdBy?.name || "Leadership",
+      teamName: task.team?.name || "",
+      isTeamTask: Boolean(task.teamId && !task.assignedToId),
     });
   }
 };

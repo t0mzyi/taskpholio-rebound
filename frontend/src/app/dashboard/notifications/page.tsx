@@ -102,7 +102,8 @@ export default function NotificationsPage() {
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData?.session?.user?.id;
       if (!userId) return;
-      await supabase.from("notifications").delete().eq("user_id", userId);
+      const { error } = await supabase.from("notifications").delete().eq("user_id", userId);
+      if (error) throw error;
       setNotifications([]);
       toast.success("Notifications cleared");
     } catch {
