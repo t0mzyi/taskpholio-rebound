@@ -99,7 +99,6 @@ export default function PendingTasksPage() {
         const type = task.assignmentType || "";
         return (
           task.title.toLowerCase().includes(normalizedQuery) ||
-          task.description.toLowerCase().includes(normalizedQuery) ||
           owner.toLowerCase().includes(normalizedQuery) ||
           type.toLowerCase().includes(normalizedQuery)
         );
@@ -201,11 +200,6 @@ export default function PendingTasksPage() {
                   <tr key={task._id}>
                     <td>
                       <p style={{ fontWeight: 700 }}>{task.title}</p>
-                      {task.description && (
-                        <p className="muted" style={{ marginTop: "0.18rem", fontSize: "0.72rem" }}>
-                          {task.description}
-                        </p>
-                      )}
                     </td>
                     <td>
                       <div style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
