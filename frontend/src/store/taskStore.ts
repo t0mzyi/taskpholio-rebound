@@ -309,13 +309,6 @@ const sendPendingReminderEmails = async (tasks: Task[], actor: User | null): Pro
   );
   if (candidates.length === 0) return;
 
-  const { data: leaders, error: leaderError } = await supabase
-    .from("profiles")
-    .select("id")
-    .in("role", ["ceo", "cto"]);
-  if (leaderError) return;
-
-  const leaderIds = new Set((leaders || []).map((leader: any) => leader.id).filter(Boolean));
   const now = Date.now();
 
   const teamMemberCache = new Map<string, string[]>();
@@ -336,13 +329,20 @@ const sendPendingReminderEmails = async (tasks: Task[], actor: User | null): Pro
     }
 
     const recipientIds = new Set<string>();
-    if (task.assignedToId) recipientIds.add(task.assignedToId);
-    if (task.teamId) {
-      const teamMembers = await resolveTeamMembers(task.teamId);
-      teamMembers.forEach((memberId) => recipientIds.add(memberId));
+    if (task.assignedToId) {
+      recipientIds.add(task.assignedToId);
+    } else if (task.teamId) {
+      const localProgress = normalizeTeamProgress(task.teamProgress || []);
+      const pendingMemberIds =
+        localProgress.length > 0
+          ? localProgress
+              .filter((entry) => entry.status !== "completed")
+              .map((entry) => entry.userId)
+              .filter(Boolean)
+          : await resolveTeamMembers(task.teamId);
+
+      pendingMemberIds.forEach((memberId) => recipientIds.add(memberId));
     }
-    if (task.createdBy?._id) recipientIds.add(task.createdBy._id);
-    leaderIds.forEach((leaderId) => recipientIds.add(leaderId));
 
     const userIds = Array.from(recipientIds).filter(Boolean);
     if (userIds.length === 0) continue;
@@ -364,7 +364,7 @@ const sendPendingReminderEmails = async (tasks: Task[], actor: User | null): Pro
       {
         user: buildStoreUser(actor),
         action: PENDING_REMINDER_ACTIVITY_ACTION,
-        details: `Pending reminder email sent (${ageDays} day${ageDays === 1 ? "" : "s"})`,
+        details: `Pending reminder email sent to ${userIds.length} assignee(s) (${ageDays} day${ageDays === 1 ? "" : "s"})`,
         timestamp: new Date().toISOString(),
       },
     ];
