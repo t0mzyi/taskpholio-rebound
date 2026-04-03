@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { RealtimeChannel } from "@supabase/supabase-js";
 import { sendPushToUsers } from "@/lib/pushNotifications";
-import { sendTaskAssignmentEmails } from "@/lib/emailNotifications";
+import { sendPendingTaskReminderEmails, sendTaskAssignmentEmails } from "@/lib/emailNotifications";
 import { normalizeUserRole } from "@/lib/utils";
 
 interface TaskState {
@@ -41,6 +41,8 @@ const roleMap: Record<string, User["role"]> = {
 
 const OVERDUE_ALERT_TITLE = "Task overdue warning";
 const OVERDUE_ALERT_ACTIVITY_ACTION = "overdue_alert_sent";
+const PENDING_REMINDER_ACTIVITY_ACTION = "pending_reminder_email_sent";
+const PENDING_REMINDER_INTERVAL_MS = 2 * 24 * 60 * 60 * 1000;
 
 const normalizeStatusFromDb = (status: string): Task["status"] => {
   const value = (status || "").toLowerCase();
@@ -195,6 +197,22 @@ const isPastDeadline = (dueDate?: string | null): boolean => {
   return Date.now() > deadlineEnd.getTime();
 };
 
+const isDueTodayOrPast = (dueDate?: string | null): boolean => {
+  const parsed = parseDueDateLocal(dueDate);
+  if (!parsed) return false;
+  const dueDayStart = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 0, 0, 0, 0);
+  return Date.now() >= dueDayStart.getTime();
+};
+
+const getTaskAgeInDays = (dueDate?: string | null): number => {
+  const parsed = parseDueDateLocal(dueDate);
+  if (!parsed) return 0;
+  const dueDayStart = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 0, 0, 0, 0);
+  const diff = Date.now() - dueDayStart.getTime();
+  if (diff <= 0) return 0;
+  return Math.floor(diff / (24 * 60 * 60 * 1000));
+};
+
 const isIncompleteStatus = (status: Task["status"]): boolean => status !== "completed" && status !== "cancelled";
 
 const needsOverdueWarning = (task: Task): boolean =>
@@ -207,6 +225,17 @@ const needsOverdueWarning = (task: Task): boolean =>
 const hasOverdueAlertMarker = (task: Task): boolean =>
   Array.isArray(task.activity) &&
   task.activity.some((entry: any) => entry?.action === OVERDUE_ALERT_ACTIVITY_ACTION);
+
+const getLastReminderTimestamp = (task: Task): number | null => {
+  if (!Array.isArray(task.activity) || task.activity.length === 0) return null;
+  const reminderEntries = task.activity
+    .filter((entry: any) => entry?.action === PENDING_REMINDER_ACTIVITY_ACTION && entry?.timestamp)
+    .map((entry: any) => new Date(entry.timestamp).getTime())
+    .filter((value: number) => Number.isFinite(value))
+    .sort((first, second) => second - first);
+
+  return reminderEntries.length ? reminderEntries[0] : null;
+};
 
 const notifyLeadersAboutOverdueTasks = async (tasks: Task[], actor: User | null): Promise<void> => {
   const role = normalizeUserRole(actor?.role || "");
@@ -267,6 +296,86 @@ const notifyLeadersAboutOverdueTasks = async (tasks: Task[], actor: User | null)
 
     if (!markerError) {
       task.activity = nextActivity;
+    }
+  }
+};
+
+const sendPendingReminderEmails = async (tasks: Task[], actor: User | null): Promise<void> => {
+  const role = normalizeUserRole(actor?.role || "");
+  if (role !== "CEO" && role !== "CTO") return;
+
+  const candidates = tasks.filter(
+    (task) => isIncompleteStatus(task.status) && Boolean(task.dueDate) && isDueTodayOrPast(task.dueDate)
+  );
+  if (candidates.length === 0) return;
+
+  const { data: leaders, error: leaderError } = await supabase
+    .from("profiles")
+    .select("id")
+    .in("role", ["ceo", "cto"]);
+  if (leaderError) return;
+
+  const leaderIds = new Set((leaders || []).map((leader: any) => leader.id).filter(Boolean));
+  const now = Date.now();
+
+  const teamMemberCache = new Map<string, string[]>();
+  const resolveTeamMembers = async (teamId: string): Promise<string[]> => {
+    const existing = teamMemberCache.get(teamId);
+    if (existing) return existing;
+
+    const { data: members } = await supabase.from("profiles").select("id").eq("team", teamId);
+    const ids = (members || []).map((member: any) => member.id).filter(Boolean);
+    teamMemberCache.set(teamId, ids);
+    return ids;
+  };
+
+  for (const task of candidates) {
+    const lastReminder = getLastReminderTimestamp(task);
+    if (lastReminder && now - lastReminder < PENDING_REMINDER_INTERVAL_MS) {
+      continue;
+    }
+
+    const recipientIds = new Set<string>();
+    if (task.assignedToId) recipientIds.add(task.assignedToId);
+    if (task.teamId) {
+      const teamMembers = await resolveTeamMembers(task.teamId);
+      teamMembers.forEach((memberId) => recipientIds.add(memberId));
+    }
+    if (task.createdBy?._id) recipientIds.add(task.createdBy._id);
+    leaderIds.forEach((leaderId) => recipientIds.add(leaderId));
+
+    const userIds = Array.from(recipientIds).filter(Boolean);
+    if (userIds.length === 0) continue;
+
+    const ageDays = getTaskAgeInDays(task.dueDate);
+    await sendPendingTaskReminderEmails({
+      userIds,
+      taskId: task._id,
+      taskTitle: task.title,
+      taskDescription: task.description,
+      dueDate: task.dueDate,
+      assignerName: task.createdBy?.name || "Leadership",
+      teamName: task.team?.name || "",
+      reminderAgeDays: ageDays,
+    });
+
+    const reminderActivity = [
+      ...(task.activity || []),
+      {
+        user: buildStoreUser(actor),
+        action: PENDING_REMINDER_ACTIVITY_ACTION,
+        details: `Pending reminder email sent (${ageDays} day${ageDays === 1 ? "" : "s"})`,
+        timestamp: new Date().toISOString(),
+      },
+    ];
+
+    const { error: markerError } = await supabase
+      .from("tasks")
+      .update({ activity: reminderActivity })
+      .eq("id", task._id);
+
+    if (!markerError) {
+      task.activity = reminderActivity;
     }
   }
 };
@@ -576,6 +685,7 @@ export const useTaskStore = create<TaskState>()((set, get) => ({
 
       const mappedTasks = await hydrateTasks(data || []);
       await notifyLeadersAboutOverdueTasks(mappedTasks, me);
+      await sendPendingReminderEmails(mappedTasks, me);
       set({
         tasks: mappedTasks,
         isLoading: false,
