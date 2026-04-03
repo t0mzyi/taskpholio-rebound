@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 import { useTaskStore } from "@/store/taskStore";
 import { useAuthStore } from "@/store/authStore";
 import { Task } from "@/lib/types";
 import { formatDate, getDisplayName, getInitial, normalizeUserRole } from "@/lib/utils";
+import { taskDescriptionParagraphs, taskDescriptionPreview, taskDescriptionToLines } from "@/lib/taskDescription";
 import CreateTaskModal from "@/components/tasks/CreateTaskModal";
 
 const statusLabel = (status: Task["status"]) => {
@@ -43,8 +44,6 @@ const taskProgress = (task: Task) => {
   return 0;
 };
 
-const summarizeDescription = (description?: string) => (description || "").replace(/\s+/g, " ").trim();
-
 type PriorityFilter = "all" | "critical" | "high" | "medium" | "low";
 
 export default function TasksPage() {
@@ -53,6 +52,7 @@ export default function TasksPage() {
   const [query, setQuery] = useState("");
   const [priority, setPriority] = useState<PriorityFilter>("all");
   const [showModal, setShowModal] = useState(false);
+  const [previewTask, setPreviewTask] = useState<Task | null>(null);
 
   useEffect(() => {
     fetchTasks(true);
@@ -117,7 +117,9 @@ export default function TasksPage() {
         </span>
       </div>
 
-      {task.description && <p className="saas-task-desc">{summarizeDescription(task.description)}</p>}
+      {task.description && (
+        <p className="saas-task-desc saas-task-desc-readable">{taskDescriptionPreview(task.description, 4)}</p>
+      )}
 
       <div className="saas-task-meta">
         <div className="saas-task-meta-owner">
@@ -137,9 +139,13 @@ export default function TasksPage() {
         <div className="saas-progress-fill" style={{ width: `${taskProgress(task)}%` }} />
       </div>
 
-      <Link href={`/dashboard/tasks/${task._id}`} className="saas-task-open">
+      <button
+        type="button"
+        className="saas-task-open"
+        onClick={() => setPreviewTask(task)}
+      >
         Open Task →
-      </Link>
+      </button>
     </article>
   );
 
@@ -218,6 +224,72 @@ export default function TasksPage() {
       </section>
 
       {showModal && <CreateTaskModal onClose={() => setShowModal(false)} />}
+
+      {previewTask && (
+        <div className="saas-task-preview-overlay" onClick={() => setPreviewTask(null)}>
+          <section className="saas-glass saas-task-preview-modal" onClick={(event) => event.stopPropagation()}>
+            <header className="saas-task-preview-head">
+              <div>
+                <p className="saas-heading-eyebrow">Task Preview</p>
+                <h2 className="saas-task-preview-title">{previewTask.title}</h2>
+                <p className="saas-task-preview-subtitle">
+                  Shared with {getDisplayName(previewTask.assignedTo?.name, previewTask.assignedTo?.email)}
+                </p>
+              </div>
+              <button type="button" className="saas-task-preview-close" onClick={() => setPreviewTask(null)}>
+                <X size={16} />
+              </button>
+            </header>
+
+            <div className="saas-task-preview-meta">
+              <span className={`saas-chip ${statusChipClass(previewTask.status)}`}>{statusLabel(previewTask.status)}</span>
+              <span className={`saas-chip ${priorityChipClass(previewTask.priority)}`}>{priorityLabel(previewTask.priority)}</span>
+              <span className="saas-chip muted">{previewTask.dueDate ? formatDate(previewTask.dueDate) : "No deadline"}</span>
+              <span className={`saas-chip ${previewTask.visibility === "all" ? "primary" : "muted"}`}>
+                {previewTask.visibility === "all" ? "Public" : previewTask.visibility === "team" ? "Team" : "Private"}
+              </span>
+            </div>
+
+            <div className="saas-task-preview-body">
+              {(() => {
+                const lines = taskDescriptionToLines(previewTask.description);
+                const isListView = lines.some((line) => line.startsWith("•") || line.startsWith("-"));
+                if (isListView) {
+                  return (
+                    <ul className="saas-task-preview-list">
+                      {lines.map((line, index) => (
+                        <li key={`${previewTask._id}-line-${index}`} className="saas-task-preview-paragraph">
+                          {line.replace(/^[•-]\s*/, "")}
+                        </li>
+                      ))}
+                    </ul>
+                  );
+                }
+
+                const paragraphs = taskDescriptionParagraphs(previewTask.description, 2);
+                return paragraphs.length ? (
+                  paragraphs.map((paragraph, index) => (
+                    <p key={`${previewTask._id}-paragraph-${index}`} className="saas-task-preview-paragraph">
+                      {paragraph}
+                    </p>
+                  ))
+                ) : (
+                  <p className="saas-task-preview-empty">No task description provided.</p>
+                );
+              })()}
+            </div>
+
+            <footer className="saas-task-preview-footer">
+              <button type="button" className="saas-btn-secondary" onClick={() => setPreviewTask(null)}>
+                Close
+              </button>
+              <Link href={`/dashboard/tasks/${previewTask._id}`} className="saas-btn-primary" onClick={() => setPreviewTask(null)}>
+                Open Full Task
+              </Link>
+            </footer>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

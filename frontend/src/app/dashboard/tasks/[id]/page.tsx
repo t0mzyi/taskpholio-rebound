@@ -9,6 +9,7 @@ import {
 import { useTaskStore } from "@/store/taskStore";
 import { useAuthStore } from "@/store/authStore";
 import { cn, getPriorityColor, getStatusColor, formatDate, formatRelativeTime, getDisplayName, getInitial } from "@/lib/utils";
+import { taskDescriptionParagraphs, taskDescriptionToLines } from "@/lib/taskDescription";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { sendPushToUsers } from "@/lib/pushNotifications";
@@ -244,6 +245,9 @@ export default function TaskDetailPage() {
   const teamProgressEntries = task.teamProgress || [];
   const teamCompletedCount = teamProgressEntries.filter((entry) => entry.status === "completed").length;
   const currentProgressStep = stepIndex(myTeamProgressStatus);
+  const descriptionLines = taskDescriptionToLines(task.description);
+  const usesBullets = descriptionLines.some((line) => line.startsWith("•") || line.startsWith("-"));
+  const descriptionParagraphs = usesBullets ? [] : taskDescriptionParagraphs(task.description, 2);
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-20">
@@ -270,8 +274,24 @@ export default function TaskDetailPage() {
         <div className="lg:col-span-2 space-y-6">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-3xl p-8 border-primary/10 shadow-xl">
             <h1 className="text-3xl font-black text-foreground tracking-tight mb-4">{task.title}</h1>
-            <div className="prose prose-invert max-w-none">
-              <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{task.description}</p>
+            <div className="prose prose-invert max-w-none space-y-3">
+              {usesBullets ? (
+                <ul className="space-y-2">
+                  {descriptionLines.map((line, index) => (
+                    <li key={`desc-line-${index}`} className="text-muted-foreground leading-relaxed">
+                      {line.replace(/^[•-]\s*/, "")}
+                    </li>
+                  ))}
+                </ul>
+              ) : descriptionParagraphs.length ? (
+                descriptionParagraphs.map((paragraph, index) => (
+                  <p key={`desc-paragraph-${index}`} className="text-muted-foreground leading-relaxed">
+                    {paragraph}
+                  </p>
+                ))
+              ) : (
+                <p className="text-muted-foreground leading-relaxed">No task description provided.</p>
+              )}
             </div>
 
             {/* Progress Visualization */}
