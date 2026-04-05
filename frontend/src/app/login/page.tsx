@@ -1,10 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Zap, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import "../auth.css";
 
@@ -12,8 +13,31 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [staySignedIn, setStaySignedIn] = useState(true);
-  const { login, isLoading } = useAuthStore();
+  const { login, isLoading, fetchMe } = useAuthStore();
   const router = useRouter();
+
+  useEffect(() => {
+    let mounted = true;
+
+    const restoreSession = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!mounted || !session?.access_token) return;
+        await fetchMe().catch(() => undefined);
+        router.replace("/dashboard");
+      } catch {
+        // ignore and keep login form visible
+      }
+    };
+
+    restoreSession();
+    return () => {
+      mounted = false;
+    };
+  }, [fetchMe, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
