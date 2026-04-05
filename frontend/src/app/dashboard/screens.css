@@ -439,6 +439,77 @@
   min-height: 380px;
 }
 
+.saas-kanban-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.85rem;
+}
+
+@media (min-width: 920px) {
+  .saas-kanban-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1380px) {
+  .saas-kanban-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.saas-kanban-column {
+  padding: 0.72rem;
+  min-height: 620px;
+}
+
+.saas-kanban-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.saas-kanban-title-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.46rem;
+  min-width: 0;
+}
+
+.saas-kanban-dot {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.saas-kanban-dot.todo {
+  background: #94a3b8;
+  box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.2);
+}
+
+.saas-kanban-dot.progress {
+  background: #8b5cf6;
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.24);
+}
+
+.saas-kanban-dot.review {
+  background: #f59e0b;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.2);
+}
+
+.saas-kanban-dot.done {
+  background: #10b981;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
+}
+
+.saas-kanban-subtitle {
+  margin-top: 0.32rem;
+  margin-bottom: 0.58rem;
+  font-size: 0.72rem;
+  color: rgba(148, 160, 196, 0.8);
+}
+
 .saas-column-head {
   display: flex;
   align-items: center;
@@ -488,16 +559,29 @@
   justify-content: flex-start;
   border-radius: 0.86rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(14, 15, 21, 0.88);
-  padding: 0.62rem;
-  min-height: 216px;
+  background: linear-gradient(165deg, rgba(17, 18, 26, 0.94), rgba(11, 12, 18, 0.92));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 10px 20px rgba(0, 0, 0, 0.32);
+  padding: 0.66rem;
+  min-height: 214px;
+  transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.saas-task-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(185, 120, 255, 0.44);
+  box-shadow: 0 16px 22px rgba(0, 0, 0, 0.38);
+}
+
+.saas-task-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
 }
 
 .saas-task-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.5rem;
+  margin-bottom: 0.18rem;
 }
 
 .saas-task-title {
@@ -513,16 +597,18 @@
 }
 
 .saas-task-desc {
-  margin-top: 0.2rem;
+  margin-top: 0.14rem;
   color: rgba(158, 165, 188, 0.88);
-  font-size: 0.73rem;
+  font-size: 0.74rem;
   line-height: 1.4;
-  display: block;
-  white-space: pre-line;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  white-space: normal;
   overflow: hidden;
   text-overflow: ellipsis;
-  min-height: calc(1.4em * 3);
-  max-height: calc(1.4em * 6);
+  min-height: calc(1.4em * 2.7);
+  max-height: calc(1.4em * 3.2);
   word-break: break-word;
 }
 
@@ -535,7 +621,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.42rem;
-  margin-top: 0.46rem;
+  margin-top: 0.48rem;
   font-size: 0.7rem;
   color: rgba(156, 166, 198, 0.86);
 }
@@ -557,6 +643,34 @@
 .saas-task-due-date {
   white-space: nowrap;
   text-align: right;
+  color: rgba(188, 197, 228, 0.88);
+}
+
+.saas-task-pills {
+  margin-top: 0.42rem;
+}
+
+.saas-chip.scope {
+  border-color: rgba(164, 173, 211, 0.3);
+  color: rgba(204, 214, 246, 0.94);
+}
+
+.saas-chip.scope.scope-direct {
+  border-color: rgba(99, 102, 241, 0.34);
+  background: rgba(79, 70, 229, 0.14);
+  color: #c7d2fe;
+}
+
+.saas-chip.scope.scope-team {
+  border-color: rgba(16, 185, 129, 0.34);
+  background: rgba(16, 185, 129, 0.14);
+  color: #a7f3d0;
+}
+
+.saas-chip.scope.scope-hybrid {
+  border-color: rgba(249, 115, 22, 0.34);
+  background: rgba(249, 115, 22, 0.14);
+  color: #fed7aa;
 }
 
 .saas-user-dot {
@@ -572,13 +686,25 @@
 }
 
 .saas-progress-label {
-  margin-top: 0.38rem;
   font-size: 0.66rem;
   color: rgba(134, 143, 176, 0.86);
 }
 
+.saas-progress-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.46rem;
+}
+
+.saas-progress-value {
+  font-size: 0.68rem;
+  color: rgba(196, 204, 235, 0.9);
+  font-weight: 700;
+}
+
 .saas-progress-rail {
-  margin-top: 0.2rem;
+  margin-top: 0.16rem;
   width: 100%;
   height: 0.22rem;
   border-radius: 999px;
@@ -593,18 +719,18 @@
 }
 
 .saas-task-open {
-  margin-top: 0.52rem;
+  margin-top: 0.58rem;
   width: 100%;
-  text-align: center;
+  text-align: left;
   font-size: 0.72rem;
-  color: #e3a8da;
+  color: #d5b9ff;
   font-weight: 600;
-  border-top: 1px solid rgba(86, 92, 138, 0.2);
-  padding-top: 0.45rem;
+  border-top: 1px solid rgba(104, 112, 158, 0.24);
+  padding-top: 0.42rem;
 }
 
 .saas-task-open:hover {
-  color: #ffd6f8;
+  color: #f2dcff;
 }
 
 .saas-task-preview-overlay {
