@@ -64,6 +64,11 @@ const taskSchema = new mongoose.Schema({
     type: Date,
     index: true
   },
+  client: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Client',
+    index: true
+  },
   startDate: Date,
   completedAt: Date,
   estimatedHours: Number,

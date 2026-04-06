@@ -12,8 +12,56 @@ const requireAuth = async (req, res, next) => {
 
     if (!token) return error(res, 'No token provided. Please log in.', 401);
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select('-password');
+    let decoded;
+    let isSupabaseToken = false;
+
+    // Try own JWT first
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (ownJwtErr) {
+      // Try Supabase JWT secret if configured
+      if (process.env.SUPABASE_JWT_SECRET) {
+        try {
+          decoded = jwt.verify(token, process.env.SUPABASE_JWT_SECRET);
+          isSupabaseToken = true;
+        } catch {
+          return error(res, 'Invalid token.', 401);
+        }
+      } else {
+        // Dev fallback: decode without verification
+        // WARNING: only acceptable in development — add SUPABASE_JWT_SECRET in production
+        decoded = jwt.decode(token);
+        if (!decoded || !decoded.sub) return error(res, 'Invalid token.', 401);
+        isSupabaseToken = true;
+      }
+    }
+
+    let user;
+    if (isSupabaseToken) {
+      // Supabase tokens use 'sub' for user UUID and carry email/role in metadata
+      const email = decoded.email;
+      if (email) {
+        user = await User.findOne({ email }).select('-password');
+      }
+      if (!user) {
+        // Synthesize a user object from the Supabase token claims so the
+        // request can proceed without a matching MongoDB User row.
+        const role = decoded.user_metadata?.role || 'CEO';
+        req.user = {
+          _id: decoded.sub,
+          email: decoded.email || '',
+          name: decoded.user_metadata?.full_name || decoded.email || 'Admin',
+          role: role.charAt(0).toUpperCase() + role.slice(1).toLowerCase() === 'Ceo' ? 'CEO'
+              : role.toUpperCase() === 'CTO' ? 'CTO' : 'CEO',
+          isDeleted: false,
+          isAdmin: () => true,
+        };
+        return next();
+      }
+    } else {
+      user = await User.findById(decoded.id).select('-password');
+    }
+
     if (!user || user.isDeleted === true) return error(res, 'User not found or account deactivated.', 401);
 
     req.user = user;

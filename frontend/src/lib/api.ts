@@ -1,16 +1,37 @@
 import axios from "axios";
-let RAW_URL = process.env.NEXT_PUBLIC_API_URL || "https://taskpholio-saas-1.onrender.com/api/v1";
+import { supabase } from "@/lib/supabase";
 
-// Ensure /api/v1 prefix is present (Defensive check for Vercel env mismatches)
-if (RAW_URL && !RAW_URL.includes("/api/v1")) {
-  RAW_URL = RAW_URL.endsWith("/") ? `${RAW_URL}api/v1` : `${RAW_URL}/api/v1`;
-}
+// Relative URL — Next.js rewrites proxy this to http://localhost:5000/api/v1/
+const API_BASE_URL = "/api/v1/";
 
-const API_BASE_URL = RAW_URL.endsWith('/') ? RAW_URL : `${RAW_URL}/`;
-
-const getStoredToken = (): string | null => {
+/**
+ * Always returns the freshest available token:
+ * 1. Tries Supabase's live session (auto-refreshed by Supabase SDK).
+ * 2. Falls back to taskpholio_token in localStorage/sessionStorage.
+ *
+ * This prevents the "Strategic route not found" / 401 errors that occur on
+ * repeated hard refreshes when Supabase has rotated the access token but the
+ * stored taskpholio_token is still pointing at the old one.
+ */
+const getFreshToken = async (): Promise<string | null> => {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("taskpholio_token") || sessionStorage.getItem("taskpholio_token");
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (data.session?.access_token) {
+      // Keep taskpholio_token in sync so other code reading it stays current
+      const storage = localStorage.getItem("taskpholio_token")
+        ? localStorage
+        : sessionStorage;
+      storage.setItem("taskpholio_token", data.session.access_token);
+      return data.session.access_token;
+    }
+  } catch {
+    // Supabase unavailable — fall through to stored token
+  }
+  return (
+    localStorage.getItem("taskpholio_token") ||
+    sessionStorage.getItem("taskpholio_token")
+  );
 };
 
 export const api = axios.create({
@@ -20,26 +41,38 @@ export const api = axios.create({
   timeout: 45000,
 });
 
-// DIAGNOSTIC REQUEST LOGGING
-api.interceptors.request.use((config) => {
+// REQUEST INTERCEPTOR — attaches fresh auth token on every call
+api.interceptors.request.use(async (config) => {
+  // Fix: If URL starts with a slash, Axios overrides baseURL. Strip it so
+  // the /api/v1 prefix from baseURL is preserved correctly.
+  if (config.url && config.url.startsWith("/")) {
+    config.url = config.url.substring(1);
+  }
+
   const fullUrl = `${config.baseURL}${config.url}`;
   console.log(`[API REQUEST] ${config.method?.toUpperCase()} ${fullUrl}`, config.data);
-  
-  const token = getStoredToken();
+
+  const token = await getFreshToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
-// DIAGNOSTIC RESPONSE/ERROR LOGGING
+// RESPONSE INTERCEPTOR — logs results and handles global 401 redirects
 api.interceptors.response.use(
   (response) => {
-    console.log(`[API RESPONSE] ${response.config.method?.toUpperCase()} ${response.config.url}:`, response.data);
+    console.log(
+      `[API RESPONSE] ${response.config.method?.toUpperCase()} ${response.config.url}:`,
+      response.data
+    );
     return response;
   },
   (error) => {
-    console.error(`[API ERROR] ${error.config?.method?.toUpperCase()} ${error.config?.url}:`, error.response?.data || error.message);
+    console.error(
+      `[API ERROR] ${error.config?.method?.toUpperCase()} ${error.config?.url}:`,
+      error.response?.data || error.message
+    );
     if (error.response?.status === 401) {
       if (typeof window !== "undefined") {
         localStorage.removeItem("taskpholio_token");

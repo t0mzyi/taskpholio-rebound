@@ -37,6 +37,7 @@ app.use(cors({
     const allowedList = [
       'http://localhost:3000',
       'http://localhost:3001',
+      'http://localhost:5173',
       'https://taskpholio-saas.vercel.app',
       process.env.FRONTEND_URL
     ].filter(Boolean);
@@ -81,6 +82,7 @@ app.use('/api/v1/auth/login', authLimiter);
 app.use('/api/v1/auth/register', authLimiter);
 
 app.use('/api/v1/auth', require('./routes/authRoutes'));
+app.use('/api/v1/clients', require('./routes/clientRoutes'));
 app.use('/api/v1/tasks', require('./routes/taskRoutes'));
 app.use('/api/v1/teams', require('./routes/teamRoutes'));
 app.use('/api/v1/meetings', require('./routes/meetingRoutes'));

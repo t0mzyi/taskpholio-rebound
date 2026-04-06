@@ -95,6 +95,7 @@ exports.getMeetings = async (req, res) => {
       .populate('scheduledBy', 'name email avatar')
       .populate('attendees.user', 'name email avatar role')
       .populate('teams', 'name color')
+      .populate('client', 'name email company')
       .sort({ startTime: 1 })
       .skip(skip)
       .limit(parseInt(limit));

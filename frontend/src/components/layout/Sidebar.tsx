@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, CheckSquare, Calendar, Bell, BarChart3,
-  Settings, LogOut, ChevronLeft, ChevronRight, Zap, ShieldCheck, Users, AlertTriangle
+  Settings, LogOut, ChevronLeft, ChevronRight, Zap, ShieldCheck, Users, AlertTriangle, Briefcase
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useUIStore } from "@/store/uiStore";
@@ -18,6 +18,7 @@ const baseNav = [
   { href: "/dashboard/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/dashboard/pending", label: "Pending", icon: AlertTriangle },
   { href: "/dashboard/meetings", label: "Meetings", icon: Calendar },
+  { href: "/dashboard/clients", label: "Clients", icon: Briefcase },
   { href: "/dashboard/notifications", label: "Notifications", icon: Bell },
   { href: "/dashboard/teams", label: "Teams", icon: Users },
 ];

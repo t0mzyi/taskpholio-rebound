@@ -17,7 +17,8 @@ exports.createTask = async (req, res) => {
       estimatedHours,
       tags,
       subtasks,
-      attachments
+      attachments,
+      client
     } = req.body;
 
     // Validate
@@ -97,6 +98,7 @@ exports.getTasks = async (req, res) => {
     const userRole = req.user.role;
 
     let query = { isArchived: false };
+    if (req.query.client) query.client = req.query.client;
 
     // Role-based filtering
     if (userRole === 'CEO' || userRole === 'CTO') {
