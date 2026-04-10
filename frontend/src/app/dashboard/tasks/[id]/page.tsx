@@ -9,6 +9,7 @@ import {
 import { useTaskStore } from "@/store/taskStore";
 import { useAuthStore } from "@/store/authStore";
 import { cn, getPriorityColor, getStatusColor, formatDate, formatRelativeTime, getDisplayName, getInitial } from "@/lib/utils";
+import TaskBriefingView from "@/components/tasks/TaskBriefingView";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { sendPushToUsers } from "@/lib/pushNotifications";
@@ -271,7 +272,7 @@ export default function TaskDetailPage() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-3xl p-8 border-primary/10 shadow-xl">
             <h1 className="text-3xl font-black text-foreground tracking-tight mb-4">{task.title}</h1>
             <div className="prose prose-invert max-w-none">
-              <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{task.description}</p>
+              <TaskBriefingView description={task.description} />
             </div>
 
             {/* Progress Visualization */}

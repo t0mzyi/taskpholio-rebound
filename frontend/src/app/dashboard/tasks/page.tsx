@@ -2,18 +2,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 import { useTaskStore } from "@/store/taskStore";
 import { useAuthStore } from "@/store/authStore";
 import { Task } from "@/lib/types";
 import { formatDate, getDisplayName, getInitial, normalizeUserRole } from "@/lib/utils";
+import { taskDescriptionPreview } from "@/lib/taskDescription";
+import TaskBriefingView from "@/components/tasks/TaskBriefingView";
 import CreateTaskModal from "@/components/tasks/CreateTaskModal";
 
 const statusLabel = (status: Task["status"]) => {
   if (status === "in-progress") return "In Progress";
   if (status === "completed") return "Completed";
-  if (status === "blocked") return "Blocked";
-  return "Not Started";
+  if (status === "blocked") return "Review / QA";
+  return "To Do";
 };
 
 const priorityLabel = (priority: Task["priority"]) => {
@@ -39,13 +41,60 @@ const taskProgress = (task: Task) => {
   if (typeof task.progress === "number") return Math.max(0, Math.min(task.progress, 100));
   if (task.status === "completed") return 100;
   if (task.status === "in-progress") return 50;
-  if (task.status === "blocked") return 15;
+  if (task.status === "blocked") return 20;
   return 0;
 };
 
-const summarizeDescription = (description?: string) => (description || "").replace(/\s+/g, " ").trim();
+const assignmentLabel = (task: Task) => {
+  if (task.assignmentType === "team") return "Team";
+  if (task.assignmentType === "hybrid") return "Team + Member";
+  return "Direct";
+};
+
+const assignmentChipClass = (task: Task) => {
+  if (task.assignmentType === "team") return "scope-team";
+  if (task.assignmentType === "hybrid") return "scope-hybrid";
+  return "scope-direct";
+};
+
+const visibilityLabel = (task: Task) => {
+  if (task.visibility === "all") return "Public";
+  if (task.visibility === "team") return "Team";
+  return "Private";
+};
+
+const compactTaskDescription = (description?: string) => {
+  const preview = taskDescriptionPreview(description, 4).replace(/\s*\n+\s*/g, " ").replace(/\s+/g, " ").trim();
+  if (!preview) return "No briefing added yet.";
+  if (preview.length <= 190) return preview;
+  return `${preview.slice(0, 187)}...`;
+};
 
 type PriorityFilter = "all" | "critical" | "high" | "medium" | "low";
+type LaneKey = "pending" | "in-progress" | "blocked" | "completed";
+
+const laneMeta: Record<LaneKey, { title: string; subtitle: string; dotClass: string }> = {
+  pending: {
+    title: "To Do",
+    subtitle: "Ready to start",
+    dotClass: "todo",
+  },
+  "in-progress": {
+    title: "In Progress",
+    subtitle: "Execution underway",
+    dotClass: "progress",
+  },
+  blocked: {
+    title: "Review / QA",
+    subtitle: "Needs unblock or review",
+    dotClass: "review",
+  },
+  completed: {
+    title: "Done",
+    subtitle: "Finished tasks",
+    dotClass: "done",
+  },
+};
 
 export default function TasksPage() {
   const { user } = useAuthStore();
@@ -53,6 +102,7 @@ export default function TasksPage() {
   const [query, setQuery] = useState("");
   const [priority, setPriority] = useState<PriorityFilter>("all");
   const [showModal, setShowModal] = useState(false);
+  const [previewTask, setPreviewTask] = useState<Task | null>(null);
 
   useEffect(() => {
     fetchTasks(true);
@@ -65,7 +115,7 @@ export default function TasksPage() {
   const filtered = useMemo(() => {
     const search = query.trim().toLowerCase();
     return tasks.filter((task) => {
-      if (task.status === "completed") return false;
+      if (task.status === "cancelled") return false;
 
       const matchSearch =
         !search ||
@@ -108,40 +158,65 @@ export default function TasksPage() {
     return filtered.filter((task) => task.visibility === "all");
   }, [filtered, normalizedRole, user?._id]);
 
-  const renderTaskCard = (task: Task) => (
-    <article key={task._id} className="saas-task-card">
-      <div className="saas-task-top">
-        <h4 className="saas-task-title">{task.title}</h4>
-        <span className={`saas-chip ${task.visibility === "all" ? "primary" : "muted"}`}>
-          {task.visibility === "all" ? "Public" : task.visibility === "team" ? "Team" : "Private"}
-        </span>
-      </div>
+  const laneTasks = useMemo(() => {
+    const sorted = [...filtered].sort((a, b) => {
+      const aDue = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+      const bDue = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+      if (aDue !== bDue) return aDue - bDue;
+      return new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime();
+    });
 
-      {task.description && <p className="saas-task-desc">{summarizeDescription(task.description)}</p>}
+    return {
+      pending: sorted.filter((task) => task.status === "pending"),
+      "in-progress": sorted.filter((task) => task.status === "in-progress"),
+      blocked: sorted.filter((task) => task.status === "blocked"),
+      completed: sorted.filter((task) => task.status === "completed"),
+    } as Record<LaneKey, Task[]>;
+  }, [filtered]);
 
-      <div className="saas-task-meta">
-        <div className="saas-task-meta-owner">
-          <span className="saas-user-dot">{getInitial(task.assignedTo?.name, task.assignedTo?.email)}</span>
-          <span>{getDisplayName(task.assignedTo?.name, task.assignedTo?.email)}</span>
+  const renderTaskCard = (task: Task) => {
+    const ownerLabel =
+      task.assignmentType === "team" && !task.assignedTo?.name && task.team?.name
+        ? task.team.name
+        : getDisplayName(task.assignedTo?.name, task.assignedTo?.email);
+
+    return (
+      <article key={task._id} className="saas-task-card" data-status={task.status}>
+        <div className="saas-task-topline">
+          <span className={`saas-chip scope ${assignmentChipClass(task)}`}>{assignmentLabel(task)}</span>
+          <span className={`saas-chip ${task.visibility === "all" ? "primary" : "muted"}`}>{visibilityLabel(task)}</span>
         </div>
-        <span className="saas-task-due-date">{task.dueDate ? formatDate(task.dueDate) : "No deadline"}</span>
-      </div>
 
-      <div className="saas-pill-row" style={{ marginTop: "0.34rem" }}>
-        <span className={`saas-chip ${statusChipClass(task.status)}`}>{statusLabel(task.status)}</span>
-        <span className={`saas-chip ${priorityChipClass(task.priority)}`}>{priorityLabel(task.priority)}</span>
-      </div>
+        <h4 className="saas-task-title">{task.title}</h4>
+        <p className="saas-task-desc">{compactTaskDescription(task.description)}</p>
 
-      <p className="saas-progress-label">Progress</p>
-      <div className="saas-progress-rail">
-        <div className="saas-progress-fill" style={{ width: `${taskProgress(task)}%` }} />
-      </div>
+        <div className="saas-task-meta">
+          <div className="saas-task-meta-owner">
+            <span className="saas-user-dot">{getInitial(ownerLabel, task.assignedTo?.email)}</span>
+            <span>{ownerLabel}</span>
+          </div>
+          <span className="saas-task-due-date">{task.dueDate ? formatDate(task.dueDate) : "No deadline"}</span>
+        </div>
 
-      <Link href={`/dashboard/tasks/${task._id}`} className="saas-task-open">
-        Open Task →
-      </Link>
-    </article>
-  );
+        <div className="saas-pill-row saas-task-pills">
+          <span className={`saas-chip ${statusChipClass(task.status)}`}>{statusLabel(task.status)}</span>
+          <span className={`saas-chip ${priorityChipClass(task.priority)}`}>{priorityLabel(task.priority)}</span>
+        </div>
+
+        <div className="saas-progress-row">
+          <p className="saas-progress-label">Progress</p>
+          <span className="saas-progress-value">{taskProgress(task)}%</span>
+        </div>
+        <div className="saas-progress-rail">
+          <div className="saas-progress-fill" style={{ width: `${taskProgress(task)}%` }} />
+        </div>
+
+        <button type="button" className="saas-task-open" onClick={() => setPreviewTask(task)}>
+          Open Task →
+        </button>
+      </article>
+    );
+  };
 
   return (
     <div className="saas-page">
@@ -185,39 +260,69 @@ export default function TasksPage() {
         </div>
       </section>
 
-      <section className="saas-page-grid-3">
-        <div className="saas-glass saas-column-card">
-          <div className="saas-column-head">
-            <h3 className="saas-column-title">Directly Assigned to You</h3>
-            <span className="saas-column-count">{directTasks.length}</span>
+      <section className="saas-kanban-grid">
+        {(Object.keys(laneMeta) as LaneKey[]).map((lane) => (
+          <div key={lane} className="saas-glass saas-kanban-column">
+            <div className="saas-kanban-head">
+              <div className="saas-kanban-title-wrap">
+                <span className={`saas-kanban-dot ${laneMeta[lane].dotClass}`} />
+                <h3 className="saas-column-title">{laneMeta[lane].title}</h3>
+              </div>
+              <span className="saas-column-count">{laneTasks[lane].length}</span>
+            </div>
+            <p className="saas-kanban-subtitle">{laneMeta[lane].subtitle}</p>
+            <div className="saas-task-stack saas-task-stack-kanban">
+              {laneTasks[lane].length ? laneTasks[lane].map(renderTaskCard) : <p className="saas-empty">No tasks here.</p>}
+            </div>
           </div>
-          <div className="saas-task-stack">
-            {directTasks.length ? directTasks.map(renderTaskCard) : <p className="saas-empty">No direct tasks found.</p>}
-          </div>
-        </div>
-
-        <div className="saas-glass saas-column-card">
-          <div className="saas-column-head">
-            <h3 className="saas-column-title">Team-wide Tasks</h3>
-            <span className="saas-column-count">{teamTasks.length}</span>
-          </div>
-          <div className="saas-task-stack">
-            {teamTasks.length ? teamTasks.map(renderTaskCard) : <p className="saas-empty">No team tasks found.</p>}
-          </div>
-        </div>
-
-        <div className="saas-glass saas-column-card">
-          <div className="saas-column-head">
-            <h3 className="saas-column-title">Public Member Tasks</h3>
-            <span className="saas-column-count">{publicTasks.length}</span>
-          </div>
-          <div className="saas-task-stack">
-            {publicTasks.length ? publicTasks.map(renderTaskCard) : <p className="saas-empty">No public tasks found.</p>}
-          </div>
-        </div>
+        ))}
       </section>
 
       {showModal && <CreateTaskModal onClose={() => setShowModal(false)} />}
+
+      {previewTask && (
+        <div className="saas-task-preview-overlay" onClick={() => setPreviewTask(null)}>
+          <section className="saas-glass saas-task-preview-modal" onClick={(event) => event.stopPropagation()}>
+            <header className="saas-task-preview-head">
+              <div>
+                <p className="saas-heading-eyebrow">Task Preview</p>
+                <h2 className="saas-task-preview-title">{previewTask.title}</h2>
+                <p className="saas-task-preview-subtitle">
+                  Shared with{" "}
+                  {previewTask.assignmentType === "team" && previewTask.team?.name
+                    ? previewTask.team.name
+                    : getDisplayName(previewTask.assignedTo?.name, previewTask.assignedTo?.email)}
+                </p>
+              </div>
+              <button type="button" className="saas-task-preview-close" onClick={() => setPreviewTask(null)}>
+                <X size={16} />
+              </button>
+            </header>
+
+            <div className="saas-task-preview-meta">
+              <span className={`saas-chip ${statusChipClass(previewTask.status)}`}>{statusLabel(previewTask.status)}</span>
+              <span className={`saas-chip ${priorityChipClass(previewTask.priority)}`}>{priorityLabel(previewTask.priority)}</span>
+              <span className="saas-chip muted">{previewTask.dueDate ? formatDate(previewTask.dueDate) : "No deadline"}</span>
+              <span className={`saas-chip ${previewTask.visibility === "all" ? "primary" : "muted"}`}>
+                {visibilityLabel(previewTask)}
+              </span>
+            </div>
+
+            <div className="saas-task-preview-body">
+              <TaskBriefingView description={previewTask.description} />
+            </div>
+
+            <footer className="saas-task-preview-footer">
+              <button type="button" className="saas-btn-secondary" onClick={() => setPreviewTask(null)}>
+                Close
+              </button>
+              <Link href={`/dashboard/tasks/${previewTask._id}`} className="saas-btn-primary" onClick={() => setPreviewTask(null)}>
+                Open Full Task
+              </Link>
+            </footer>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

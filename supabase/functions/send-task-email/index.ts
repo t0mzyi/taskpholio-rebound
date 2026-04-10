@@ -15,6 +15,8 @@ type TaskEmailRequest = {
   assignerName?: string;
   teamName?: string;
   isTeamTask?: boolean;
+  emailType?: "assignment" | "pending_reminder";
+  reminderAgeDays?: number;
 };
 
 type Recipient = {
@@ -73,6 +75,39 @@ const renderTaskEmail = (options: {
           <p style="margin:0 0 8px;font-size:13px;opacity:0.78;">Description</p>
           <p style="margin:0 0 12px;font-size:14px;line-height:1.55;color:#d4d9ff;">${escapeHtml(options.taskDescription || "No description provided.")}</p>
           <p style="margin:0;font-size:13px;"><strong>Deadline:</strong> ${escapeHtml(options.dueDate)}</p>
+        </div>
+        <a href="${options.taskUrl}" style="display:inline-block;margin-top:18px;padding:11px 16px;border-radius:10px;background:#5965ff;color:white;text-decoration:none;font-weight:700;">
+          Open Task
+        </a>
+      </div>
+    </div>
+  `;
+};
+
+const renderPendingReminderEmail = (options: {
+  receiverName: string;
+  taskTitle: string;
+  dueDate: string;
+  reminderAgeDays: number;
+  taskUrl: string;
+  teamName: string;
+}) => {
+  const ageLabel = options.reminderAgeDays > 0 ? `${options.reminderAgeDays} day(s)` : "today";
+
+  return `
+    <div style="font-family:Arial,sans-serif;background:#070912;color:#f5f7ff;padding:24px;">
+      <div style="max-width:640px;margin:0 auto;border:1px solid rgba(255,255,255,0.15);border-radius:16px;background:#11162a;padding:24px;">
+        <h2 style="margin:0 0 12px;font-size:22px;color:#8b95ff;">Taskpholio</h2>
+        <p style="margin:0 0 14px;font-size:14px;opacity:0.88;">Hi ${escapeHtml(options.receiverName)},</p>
+        <p style="margin:0 0 18px;font-size:14px;line-height:1.6;">
+          Reminder: the task <strong>${escapeHtml(options.taskTitle)}</strong> is still pending for <strong>${escapeHtml(ageLabel)}</strong>.
+        </p>
+        <div style="border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:14px;background:#0c1020;">
+          <p style="margin:0 0 8px;font-size:13px;opacity:0.78;">Task</p>
+          <p style="margin:0 0 10px;font-size:18px;font-weight:700;color:#e7ebff;">${escapeHtml(options.taskTitle)}</p>
+          <p style="margin:0 0 8px;font-size:13px;opacity:0.78;">Deadline</p>
+          <p style="margin:0 0 10px;font-size:14px;color:#d4d9ff;">${escapeHtml(options.dueDate)}</p>
+          ${options.teamName ? `<p style="margin:0;font-size:13px;"><strong>Team:</strong> ${escapeHtml(options.teamName)}</p>` : ""}
         </div>
         <a href="${options.taskUrl}" style="display:inline-block;margin-top:18px;padding:11px 16px;border-radius:10px;background:#5965ff;color:white;text-decoration:none;font-weight:700;">
           Open Task
@@ -208,10 +243,16 @@ serve(async (req) => {
       ? `${appBaseUrl.replace(/\/+$/, "")}/dashboard/tasks/${payload.taskId}`
       : `${appBaseUrl.replace(/\/+$/, "")}/dashboard/tasks`;
     const isTeamTask = Boolean(payload.isTeamTask);
+    const emailType = payload.emailType === "pending_reminder" ? "pending_reminder" : "assignment";
+    const reminderAgeDays = Number.isFinite(payload.reminderAgeDays)
+      ? Math.max(0, Number(payload.reminderAgeDays))
+      : 0;
 
-    const subject = isTeamTask
-      ? `New team task assigned: ${taskTitle}`
-      : `New task assigned: ${taskTitle}`;
+    const subject = emailType === "pending_reminder"
+      ? `Pending reminder: ${taskTitle}`
+      : isTeamTask
+        ? `New team task assigned: ${taskTitle}`
+        : `New task assigned: ${taskTitle}`;
 
     let sent = 0;
     let failed = 0;
@@ -219,16 +260,25 @@ serve(async (req) => {
 
     for (const recipient of validRecipients) {
       try {
-        const html = renderTaskEmail({
-          receiverName: recipient.full_name || recipient.email || "Member",
-          taskTitle,
-          taskDescription,
-          dueDate,
-          assignerName,
-          taskUrl,
-          isTeamTask,
-          teamName,
-        });
+        const html = emailType === "pending_reminder"
+          ? renderPendingReminderEmail({
+              receiverName: recipient.full_name || recipient.email || "Member",
+              taskTitle,
+              dueDate,
+              reminderAgeDays,
+              taskUrl,
+              teamName,
+            })
+          : renderTaskEmail({
+              receiverName: recipient.full_name || recipient.email || "Member",
+              taskTitle,
+              taskDescription,
+              dueDate,
+              assignerName,
+              taskUrl,
+              isTeamTask,
+              teamName,
+            });
 
         const resendResponse = await fetch("https://api.resend.com/emails", {
           method: "POST",

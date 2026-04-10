@@ -17,6 +17,17 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Build/debug artifacts
+frontend/build_*.txt
+frontend/dashboard_live.html
+frontend/dashboard_response.html
+frontend/dashboard_page_runtime.css
+supabase-app/build_output.txt
+
+# Supabase local metadata
+supabase/.temp/
+supabase-app/supabase/.temp/
+
 # OS
 .DS_Store
 Thumbs.db

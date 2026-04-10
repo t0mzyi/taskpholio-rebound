@@ -22,6 +22,17 @@ interface MeetingScheduledEmailPayload {
   location?: string;
 }
 
+interface PendingTaskReminderEmailPayload {
+  userIds: string[];
+  taskId: string;
+  taskTitle: string;
+  taskDescription?: string;
+  dueDate?: string;
+  assignerName?: string;
+  teamName?: string;
+  reminderAgeDays?: number;
+}
+
 const getFreshAccessToken = async (): Promise<string | null> => {
   const {
     data: { session },
@@ -136,5 +147,31 @@ export async function sendMeetingScheduledEmails(payload: MeetingScheduledEmailP
     );
   } catch (error) {
     console.error("Meeting email invoke crashed:", error);
+  }
+}
+
+export async function sendPendingTaskReminderEmails(payload: PendingTaskReminderEmailPayload): Promise<void> {
+  const userIds = Array.from(new Set((payload.userIds || []).filter(Boolean)));
+  if (!userIds.length) return;
+
+  try {
+    await invokeEmailFunction(
+      "send-task-email",
+      {
+        userIds,
+        taskId: payload.taskId,
+        taskTitle: payload.taskTitle,
+        taskDescription: payload.taskDescription || "",
+        dueDate: payload.dueDate || "",
+        assignerName: payload.assignerName || "Leadership",
+        teamName: payload.teamName || "",
+        isTeamTask: Boolean(payload.teamName),
+        emailType: "pending_reminder",
+        reminderAgeDays: payload.reminderAgeDays || 0,
+      },
+      "Pending reminder email"
+    );
+  } catch (error) {
+    console.error("Pending reminder email invoke crashed:", error);
   }
 }

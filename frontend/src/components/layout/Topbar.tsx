@@ -32,6 +32,8 @@ export default function Topbar({ title }: Props) {
   };
 
   const displayName = getDisplayName(user?.name, user?.email);
+  const now = new Date();
+  const monthLabel = now.toLocaleDateString("en-US", { month: "long", year: "numeric" });
   const avatarUrl = user?.avatar && !failedAvatarUrls[user.avatar] ? user.avatar : null;
   const searchPlaceholder = searchPlaceholderMap[pathname] || "Search tasks, members...";
 
@@ -44,6 +46,11 @@ export default function Topbar({ title }: Props) {
           <Search size={14} className="topbar-search-icon" />
           <input type="text" placeholder={searchPlaceholder} aria-label="Search dashboard" />
           <span className="topbar-search-kbd">⌘K</span>
+        </div>
+
+        <div className="topbar-chips" aria-label="Context filters">
+          <span className="topbar-chip">{monthLabel}</span>
+          <span className="topbar-chip topbar-chip-active">Today</span>
         </div>
 
         <PWAInstallPrompt />

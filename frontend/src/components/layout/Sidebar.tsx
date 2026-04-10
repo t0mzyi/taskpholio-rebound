@@ -12,11 +12,14 @@ import { useUIStore } from "@/store/uiStore";
 import { getDisplayName, getInitial } from "@/lib/utils";
 import "./layout.css";
 
-const baseNav = [
+const coreNav = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/dashboard/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/dashboard/pending", label: "Pending", icon: AlertTriangle },
+];
+
+const collabNav = [
   { href: "/dashboard/meetings", label: "Meetings", icon: Calendar },
   { href: "/dashboard/clients", label: "Clients", icon: Briefcase },
   { href: "/dashboard/notifications", label: "Notifications", icon: Bell },
@@ -50,10 +53,13 @@ export default function Sidebar() {
   }, [setSidebar]);
 
   const canManageAdmin = user && (user.role?.toLowerCase() === "ceo" || user.role?.toLowerCase() === "cto" || user.role?.toLowerCase() === "admin");
-  const navItems = [
-    ...baseNav,
-    ...(canManageAdmin ? [adminNav] : []),
-    settingsNav
+  const navGroups = [
+    { label: "Core", items: coreNav },
+    { label: "Collaborate", items: collabNav },
+    {
+      label: "Management",
+      items: [...(canManageAdmin ? [adminNav] : []), settingsNav],
+    },
   ];
 
   if (isMobile) {
@@ -81,23 +87,28 @@ export default function Sidebar() {
       </div>
 
       <nav className="sidebar-nav">
-        {navItems.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
-          return (
-            <Link key={href} href={href}>
-              <motion.div whileHover={{ x: 2 }} className={`sidebar-nav-item ${active ? 'active' : ''}`}>
-                <Icon />
-                <AnimatePresence>
-                  {sidebarOpen && !isCompact && (
-                    <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.1 }}>
-                      {label}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            </Link>
-          );
-        })}
+        {navGroups.map((group) => (
+          <div key={group.label} className="sidebar-nav-group">
+            {sidebarOpen && !isCompact && <p className="sidebar-section-label">{group.label}</p>}
+            {group.items.map(({ href, label, icon: Icon }) => {
+              const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+              return (
+                <Link key={href} href={href}>
+                  <motion.div whileHover={{ x: 2 }} className={`sidebar-nav-item ${active ? 'active' : ''}`}>
+                    <Icon />
+                    <AnimatePresence>
+                      {sidebarOpen && !isCompact && (
+                        <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.1 }}>
+                          {label}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       {user && (
