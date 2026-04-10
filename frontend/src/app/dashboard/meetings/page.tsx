@@ -6,7 +6,9 @@ import { CalendarPlus, ChevronLeft, ChevronRight, Clock, MapPin, Users, Video } 
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { sendMeetingScheduledEmails } from "@/lib/emailNotifications";
+import { api } from "@/lib/api";
 import { toast } from "sonner";
+import Link from "next/link";
 
 type UiMeeting = {
   _id: string;
@@ -18,6 +20,8 @@ type UiMeeting = {
   meetingLink?: string;
   status: "scheduled" | "completed";
   attendeesCount: number;
+  isPending?: boolean;
+  clientId?: string;
 };
 
 export default function MeetingsPage() {
@@ -75,7 +79,28 @@ export default function MeetingsPage() {
           };
         });
 
-        setMeetings(mapped);
+        let mappedMongo: UiMeeting[] = [];
+        try {
+          const pendingMRes = await api.get('/meetings?status=pending');
+          const mongoPending = pendingMRes.data?.data || [];
+          mappedMongo = mongoPending.map((m: any) => ({
+            _id: m._id,
+            title: `[REQUESTED] ${m.title}${m.client?.name ? ` - ${m.client.name}` : ""}`,
+            description: m.description || "",
+            startTime: m.startTime || new Date().toISOString(),
+            endTime: m.endTime || new Date().toISOString(),
+            location: m.type === 'online' ? 'Client Portal' : (m.location || 'Virtual HQ'),
+            meetingLink: m.meetingLink,
+            status: "scheduled" as const,
+            attendeesCount: 1,
+            isPending: true,
+            clientId: m.client?._id || m.client,
+          }));
+        } catch (e) {
+          console.error("Failed to fetch pending client meetings:", e);
+        }
+
+        setMeetings([...mapped, ...mappedMongo].sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()));
       } catch {
         toast.error("Failed to load meetings");
       } finally {
@@ -144,7 +169,7 @@ export default function MeetingsPage() {
           endTime: end.toISOString(),
           location: "Virtual HQ",
           meetingLink: data.link || undefined,
-          status: "scheduled",
+          status: "scheduled" as const,
           attendeesCount: 0,
         }].sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
       );
@@ -281,9 +306,15 @@ export default function MeetingsPage() {
                 </div>
 
                 <div className="saas-pill-row" style={{ marginTop: "0.6rem" }}>
-                  <a href={meeting.meetingLink || "#"} className="saas-btn-primary" target="_blank" rel="noreferrer">
-                    <Video size={14} /> Join Meeting
-                  </a>
+                  {meeting.isPending && meeting.clientId ? (
+                    <Link href={`/dashboard/clients/${meeting.clientId}`} className="saas-btn-primary">
+                      <CalendarPlus size={14} /> Accept & Add Link
+                    </Link>
+                  ) : (
+                    <a href={meeting.meetingLink || "#"} className="saas-btn-primary" target="_blank" rel="noreferrer">
+                      <Video size={14} /> Join Meeting
+                    </a>
+                  )}
                   <button type="button" className="saas-btn-secondary">View Details</button>
                 </div>
               </article>

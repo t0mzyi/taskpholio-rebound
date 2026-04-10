@@ -60,6 +60,7 @@ export interface Task {
   createdBy?: User | null;
   visibility?: "personal" | "team" | "all";
   dueDate?: string;
+  client?: Client | null;
   attachments: Attachment[];
   subtasks: Subtask[];
   comments: Comment[];
@@ -127,4 +128,57 @@ export interface Team {
 export interface ProgressUpdate {
   task: string;
   newProgress: number;
+}
+
+export interface Client {
+  _id: string;
+  name: string;
+  email: string;
+  company: string;
+  status: "pending" | "active" | "inactive";
+  lastLogin?: string;
+  createdAt: string;
+}
+
+export interface Project {
+  _id: string;
+  name: string;
+  description?: string;
+  status: 'planning' | 'in-progress' | 'review' | 'completed';
+  client: string | Client;
+  dueDate?: string;
+  progress: number;
+  milestones: {
+    started: { status: boolean; date?: string };
+    discovery: { status: boolean; date?: string };
+    designing: { status: boolean; date?: string; FigmaLink?: string };
+    development: { status: boolean; date?: string };
+    testing: { status: boolean; date?: string };
+    finalLaunch: { status: boolean; date?: string; productLink?: string };
+  };
+  createdAt: string;
+}
+
+export interface Agreement {
+  _id: string;
+  name: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize?: string;
+  category: 'Agreement' | 'Invoice' | 'Document' | 'Other';
+  status: 'draft' | 'signed' | 'expired';
+  project?: string;
+  client: string | Client;
+  createdAt: string;
+}
+
+export interface Message {
+  _id: string;
+  text: string;
+  client: string;
+  sender: string;
+  senderType: 'User' | 'Client';
+  senderName?: string;
+  attachments?: any[];
+  createdAt: string;
 }

@@ -27,6 +27,10 @@ const meetingSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Team'
   }],
+  client: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Client'
+  },
   startTime: {
     type: Date,
     required: true
@@ -63,7 +67,7 @@ const meetingSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['scheduled', 'ongoing', 'completed', 'cancelled'],
+    enum: ['pending', 'scheduled', 'ongoing', 'completed', 'cancelled'],
     default: 'scheduled'
   }
 }, { timestamps: true });
