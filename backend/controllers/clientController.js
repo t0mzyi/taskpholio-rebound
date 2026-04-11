@@ -69,7 +69,7 @@ exports.createClient = async (req, res) => {
 // Get all clients (Admin only)
 exports.getClients = async (req, res) => {
   try {
-    const clients = await Client.find().sort({ createdAt: -1 }).populate('createdBy', 'name email');
+    const clients = await Client.find({ isDeleted: { $ne: true } }).sort({ createdAt: -1 }).populate('createdBy', 'name email');
     res.json({
       success: true,
       data: { clients }
@@ -136,10 +136,14 @@ exports.updateClient = async (req, res) => {
   }
 };
 
-// Delete Client
+// Soft Delete Client (marks isDeleted=true, preserves all records)
 exports.deleteClient = async (req, res) => {
   try {
-    const client = await Client.findByIdAndDelete(req.params.id);
+    const client = await Client.findByIdAndUpdate(
+      req.params.id,
+      { isDeleted: true, deletedAt: new Date() },
+      { new: true }
+    );
     if (!client) {
       return res.status(404).json({
         success: false,
@@ -149,13 +153,13 @@ exports.deleteClient = async (req, res) => {
     
     res.json({
       success: true,
-      message: 'Client deleted successfully'
+      message: 'Client archived successfully'
     });
   } catch (error) {
     console.error('Delete client error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to delete client',
+      message: 'Failed to archive client',
       error: error.message
     });
   }

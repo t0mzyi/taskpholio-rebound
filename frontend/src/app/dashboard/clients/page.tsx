@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Briefcase, Plus, Copy, Check, Search, Mail, Building, ListTodo, ChevronRight, Settings2 } from "lucide-react";
+import { Briefcase, Plus, Copy, Check, Search, Mail, Building, ListTodo, ChevronRight, Settings2, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { getInitial } from "@/lib/utils";
@@ -33,6 +33,8 @@ export default function ClientsPage() {
   const [inviteLink, setInviteLink] = useState("");
   const [copied, setCopied] = useState(false);
   const [selectedClient, setSelectedClient] = useState<ClientType | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchClients = async () => {
     try {
@@ -82,6 +84,21 @@ export default function ClientsPage() {
       toast.error(err.response?.data?.message || "Failed to create client");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirmDeleteId) return;
+    try {
+      setDeleting(true);
+      await api.delete(`/clients/${confirmDeleteId}`);
+      toast.success("Client archived successfully");
+      setConfirmDeleteId(null);
+      fetchClients();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to archive client");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -188,13 +205,22 @@ export default function ClientsPage() {
                     </td>
                     <td className="muted">{new Date(client.createdAt).toLocaleDateString()}</td>
                     <td className="text-right">
-                      <button 
-                        onClick={() => router.push(`/dashboard/clients/${client._id}`)}
-                        className="p-2 hover:bg-white/5 rounded-lg transition-colors text-primary inline-flex items-center gap-2 group"
-                      >
-                        <span className="text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity">Intelligence Center</span>
-                        <ChevronRight size={16} />
-                      </button>
+                      <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.25rem" }}>
+                        <button 
+                          onClick={() => router.push(`/dashboard/clients/${client._id}`)}
+                          className="p-2 hover:bg-white/5 rounded-lg transition-colors text-primary inline-flex items-center gap-2 group"
+                        >
+                          <span className="text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity">Intelligence Center</span>
+                          <ChevronRight size={16} />
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteId(client._id)}
+                          className="p-2 hover:bg-red-500/10 rounded-lg transition-colors text-red-400 inline-flex items-center"
+                          title="Archive client"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -280,6 +306,35 @@ export default function ClientsPage() {
                 <button type="button" className="w-full btn-ghost" onClick={() => { setIsModalOpen(false); setInviteLink(""); }}>Close</button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {confirmDeleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="saas-glass max-w-sm w-full !bg-[#1c1c1e] outline outline-1 outline-white/10 rounded-2xl shadow-2xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center">
+                <Trash2 size={18} className="text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Archive Client?</h3>
+                <p className="text-xs text-gray-400">All their records will be preserved but hidden.</p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                className="btn-ghost"
+                onClick={() => setConfirmDeleteId(null)}
+                disabled={deleting}
+              >Cancel</button>
+              <button
+                className="btn-primary"
+                style={{ backgroundColor: "rgba(239,68,68,0.15)", color: "#f87171", border: "1px solid rgba(239,68,68,0.3)" }}
+                onClick={handleDelete}
+                disabled={deleting}
+              >{deleting ? "Archiving..." : "Yes, Archive"}</button>
+            </div>
           </div>
         </div>
       )}
