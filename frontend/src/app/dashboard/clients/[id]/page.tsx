@@ -145,7 +145,7 @@ export default function ClientIntelligencePage() {
         <div className="flex items-center gap-3">
           <button 
             className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-all flex items-center gap-2"
-            onClick={() => window.open(`http://localhost:5173/signup?email=${encodeURIComponent(client.email)}`, '_blank')}
+            onClick={() => window.open(`${process.env.NEXT_PUBLIC_CLIENT_PORTAL_URL || 'http://localhost:5173'}/signup?email=${encodeURIComponent(client.email)}`, '_blank')}
           >
             <ExternalLink size={14} /> Preview Portal
           </button>
