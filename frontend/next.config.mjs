@@ -7,7 +7,10 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   async rewrites() {
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:5000';
+    const isProd = process.env.NODE_ENV === 'production';
+    const backendUrl = isProd
+      ? 'https://taskpholio-saas-1.onrender.com'
+      : 'http://localhost:5000';
     return [
       {
         source: '/api/v1/:path*',
