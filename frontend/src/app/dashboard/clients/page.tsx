@@ -75,8 +75,8 @@ export default function ClientsPage() {
       fetchClients();
       
       const token = res.data.data.inviteToken;
-      // Default to localhost:5173 but allow production URLs
-      const clientPortalUrl = process.env.NEXT_PUBLIC_CLIENT_PORTAL_URL || "http://localhost:5173";
+      // Default to production URL but allow override via env
+      const clientPortalUrl = process.env.NEXT_PUBLIC_CLIENT_PORTAL_URL || "https://clients.labsrebound.com";
       const link = `${clientPortalUrl}/signup?email=${encodeURIComponent(formData.email)}&token=${token}`;
       setInviteLink(link);
       setFormData({ name: "", email: "", company: "" });

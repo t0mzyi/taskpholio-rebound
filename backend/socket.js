@@ -14,6 +14,7 @@ function initializeSocket(server) {
           'http://localhost:3000',
           'http://localhost:3001',
           'http://localhost:5173',
+          'https://clients.labsrebound.com',
           'https://taskpholio-saas.vercel.app'
         ];
         

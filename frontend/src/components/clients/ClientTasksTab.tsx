@@ -316,7 +316,7 @@ export default function ClientTasksTab({ client, onClose }: Props) {
             </p>
           </div>
           <a 
-            href={`http://localhost:5173/dashboard?client=${client._id}`} 
+            href={`${process.env.NEXT_PUBLIC_CLIENT_PORTAL_URL || 'https://clients.labsrebound.com'}/dashboard?client=${client._id}`} 
             target="_blank" 
             rel="noopener noreferrer"
             className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl text-sm font-medium transition-all"

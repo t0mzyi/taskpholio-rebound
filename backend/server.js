@@ -38,6 +38,7 @@ app.use(cors({
       'http://localhost:3000',
       'http://localhost:3001',
       'http://localhost:5173',
+      'https://clients.labsrebound.com',
       'https://taskpholio-saas.vercel.app',
       process.env.FRONTEND_URL
     ].filter(Boolean);
